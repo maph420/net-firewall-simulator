@@ -24,12 +24,14 @@ module Common
         SentPackets,
         Match(..),
         Rule(..),
-        RulesChain,
-        Info(..)
+        RulesChains,
+        Info(..),
+        Env(..)
     ) where
 
 import qualified Net.IPv4 as IPV4
 import qualified Data.Text as T
+import qualified Data.Map.Strict as M
 
 -------------------------
 -- general definitions --
@@ -48,14 +50,15 @@ type PortList = [Port]
 -- procurar que al hacer reject se escriba en el log.
 data Action = Accept | Drop | Reject
 
-data PacketTarget = Input | Output | Forward
+data PacketTarget = Input | Output | Forward deriving (Eq, Show, Ord)
 
 ------------------------
 -- network structures --
 ------------------------
 
 data Device = Device {
-    devName     :: T.Text,
+    devName     :: T.Text, -- nombre del dispostivio
+    devDesc     :: Maybe T.Text, -- descripcion del dispositivo, opcional
     macDir      :: T.Text,
     ipv4Dir     :: IPV4.IPv4,
     subnet      :: Maybe IPV4.IPv4Range, -- obligatoriamente pertenece a una subnet??
@@ -103,11 +106,15 @@ type SentPackets = [Packet]
 -- -srcip 10.0.0.2/16 -prot udp -dstp [53,443]
 -- MatchAnd (MatchAnd (MatchSrcSubnet 10.0.0.2/16) (MatchProt UDP)) (MatchSrcPort [53, 443])
 
+-- chain DROPPOLICY { acciones a realizar por defecto, si el paquete no matchea ninguna de las otras }
+
+-- guardar aparte, de ahi solo me interesa: el target y la accion a tomarse.    
+
 data Match = MatchAny 
     | MatchSrcIP IPV4.IPv4
     | MatchDstIP IPV4.IPv4
-    | MatchSrcSubnet T.Text
-    | MatchDstSubnet T.Text
+    | MatchSrcSubnet IPV4.IPv4Range
+    | MatchDstSubnet IPV4.IPv4Range
     | MatchProt Protocol
     | MatchInIf Interface
     | MatchOutIf Interface
@@ -120,18 +127,29 @@ data Match = MatchAny
 
 --UNA regla: target (input,output,forward), match (conds a cumplir),action(rechazar,soltar,aceptar), log (opcional?)
 data Rule = Rule {
-    ruleTarget  :: PacketTarget,
+    ruleId      :: T.Text, -- (?)
     ruleMatch   :: Match,
     ruleAction  :: Action,
     ruleLog     :: Maybe T.Text	
 } 
 
--- TODO: chequear. a priori con una lista enlazada parece lo más eficiente
-type RulesChain = [Rule]
+-- TODO: chequear. a priori con una lista enlazada parece lo más eficiente.
+-- pinta que va a haber que agregar con (:) una por una las reglas a medida que se parsean, y por ultimo revertir la lista.
+-- asi: reverse r5 : r4 : r3 : r2 : r1 : [] = [r1,r2,r3,r4,r5]
+
+-- para mayor claridad semantica
+type RulesChains = M.Map PacketTarget [Rule]
 
 -- aca está toda la información. esta estructura podria verse como el entorno de una mónada reader/writer. averiguar.
 data Info = Info {
     infoNetwork :: Network,
     infoPackets :: SentPackets,
-    infoRules :: RulesChain
+    infoRules :: RulesChains
+}
+
+-- Informacion que lleva el entorno, "procesar" la info
+data Env = Env {
+    deviceInterfaces :: M.Map IPV4.IPv4 [Interface],
+    firewallIP :: IPV4.IPv4,
+    rulesChains :: RulesChains
 }

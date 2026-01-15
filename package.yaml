@@ -24,6 +24,8 @@ dependencies:
 - array
 - ip
 - text
+- mtl # chequear
+- containers # chequear
 
 ghc-options:
 - -Wall
