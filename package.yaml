@@ -21,6 +21,9 @@ description:         Please see the README on GitHub at <https://github.com/maph
 
 dependencies:
 - base >= 4.7 && < 5
+- array
+- ip
+- text
 
 ghc-options:
 - -Wall
@@ -46,6 +49,8 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - net-firewall-simulator
+    build-tools:
+    - happy
 
 tests:
   net-firewall-simulator-test:

@@ -25,14 +25,20 @@ source-repository head
 
 library
   exposed-modules:
+      Common
+      Firewall
       Lib
+      Parse
   other-modules:
       Paths_net_firewall_simulator
   hs-source-dirs:
       src
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.7 && <5
+      array
+    , base >=4.7 && <5
+    , ip
+    , text
   default-language: Haskell2010
 
 executable net-firewall-simulator-exe
@@ -42,9 +48,14 @@ executable net-firewall-simulator-exe
   hs-source-dirs:
       app
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-tools:
+      happy
   build-depends:
-      base >=4.7 && <5
+      array
+    , base >=4.7 && <5
+    , ip
     , net-firewall-simulator
+    , text
   default-language: Haskell2010
 
 test-suite net-firewall-simulator-test
@@ -56,6 +67,9 @@ test-suite net-firewall-simulator-test
       test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      array
+    , base >=4.7 && <5
+    , ip
     , net-firewall-simulator
+    , text
   default-language: Haskell2010
