@@ -26,7 +26,9 @@ module Common
         Rule(..),
         RulesChains,
         Info(..),
-        Env(..)
+        Env(..),
+        LogLevel(..),
+        LogEntry(..)
     ) where
 
 import qualified Net.IPv4 as IPV4
@@ -40,7 +42,7 @@ import qualified Data.Map.Strict as M
 -- deberia fijar las interfaces? o dejarlas simplemente como texto?
 type Interface = T.Text
 
-data Protocol = TCP | UDP | ANY
+data Protocol = TCP | UDP | ANY deriving (Eq, Show)
 
 -- un numero entero en el intervalo [0, 65535]. TODO: realizar saneamiento de input: descartar numeros de puerto imposibles
 -- en el firewall, si no se especifican puertos, se admiten todos
@@ -48,7 +50,7 @@ type Port = Int
 type PortList = [Port]
 
 -- procurar que al hacer reject se escriba en el log.
-data Action = Accept | Drop | Reject
+data Action = Accept | Drop | Reject deriving (Eq,Show)
 
 data PacketTarget = Input | Output | Forward deriving (Eq, Show, Ord)
 
@@ -79,7 +81,7 @@ type Network = [Device]
 
 -- Paquete de red, representa un envío en la red en la que se está trabajando.
 data Packet = Packet {
-    id          :: T.Text,
+    packid      :: T.Text,
     srcip       :: IPV4.IPv4,
     dstip       :: IPV4.IPv4,
     srcport     :: Port,
@@ -108,7 +110,7 @@ type SentPackets = [Packet]
 
 -- chain DROPPOLICY { acciones a realizar por defecto, si el paquete no matchea ninguna de las otras }
 
--- guardar aparte, de ahi solo me interesa: el target y la accion a tomarse.    
+-- lo guardo como una regla más, la cual tiene como match: MatchAny
 
 data Match = MatchAny 
     | MatchSrcIP IPV4.IPv4
@@ -130,7 +132,7 @@ data Rule = Rule {
     ruleId      :: T.Text, -- (?)
     ruleMatch   :: Match,
     ruleAction  :: Action,
-    ruleLog     :: Maybe T.Text	
+    ruleLog     :: Maybe T.Text
 } 
 
 -- TODO: chequear. a priori con una lista enlazada parece lo más eficiente.
@@ -152,4 +154,14 @@ data Env = Env {
     deviceInterfaces :: M.Map IPV4.IPv4 [Interface],
     firewallIP :: IPV4.IPv4,
     rulesChains :: RulesChains
+}
+
+-- Informacion de loggeo
+
+data LogLevel = Information | Warning | Error deriving Show
+
+data LogEntry = LogEntry {
+    logLevel :: LogLevel,
+    logMessage :: T.Text,
+    logPacket :: Maybe Packet
 }

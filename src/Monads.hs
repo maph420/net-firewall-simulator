@@ -1,14 +1,18 @@
 module Monads 
     (
-        RWMonad
+        RWMonad,
+        logMsg
     )
 where
 
-import Control.Monad.Writer.Strict (Writer)
-import Control.Monad.Reader (ReaderT)
+import Control.Monad.Writer.Strict (Writer, tell)
+import Control.Monad.Reader (ReaderT, lift)
 import Common
 import qualified Data.Text as T
--- capaz hay que importar text y la def de Env
 
 -- Se crea una monada usando un transformador, "envolviendo" la monada writer sobre la transformadora reader
-type RWMonad a = ReaderT Env (Writer T.Text) a
+type RWMonad a = ReaderT Env (Writer [LogEntry]) a
+
+-- Helper function to log
+logMsg :: LogLevel -> T.Text -> Maybe Packet -> RWMonad ()
+logMsg level msg pkt = lift $ tell [LogEntry level msg pkt]
