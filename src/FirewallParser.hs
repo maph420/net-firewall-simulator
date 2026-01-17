@@ -8,7 +8,7 @@
 {-# LANGUAGE NoStrictData #-}
 {-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-module FirewallParser (parseFirewall, debugTokens) where
+module FirewallParser (parseFirewall) where
 
 import Common
 import qualified Data.Text as T
@@ -16,6 +16,7 @@ import qualified Data.Map.Strict as M
 import qualified Net.IPv4 as IPV4
 import Data.Char (isSpace, isAlpha, isAlphaNum, isDigit)
 import Data.Word (Word8)
+import Monads
 import qualified Control.Monad as Happy_Prelude
 import qualified Data.Bool as Happy_Prelude
 import qualified Data.Function as Happy_Prelude
@@ -155,6 +156,7 @@ happy_n_nonterms = 26 :: Happy_Prelude.Int
 
 happy_n_starts = 1 :: Happy_Prelude.Int
 
+happyReduce_1 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_1 = happySpecReduce_3  0# happyReduction_1
 happyReduction_1 (HappyAbsSyn16  happy_var_3)
         (HappyAbsSyn12  happy_var_2)
@@ -164,6 +166,7 @@ happyReduction_1 (HappyAbsSyn16  happy_var_3)
         )
 happyReduction_1 _ _ _  = notHappyAtAll 
 
+happyReduce_2 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_2 = happyReduce 4# 1# happyReduction_2
 happyReduction_2 (_ `HappyStk`
         (HappyAbsSyn7  happy_var_3) `HappyStk`
@@ -174,11 +177,13 @@ happyReduction_2 (_ `HappyStk`
                  (happy_var_3
         ) `HappyStk` happyRest
 
+happyReduce_3 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_3 = happySpecReduce_0  2# happyReduction_3
 happyReduction_3  =  HappyAbsSyn7
                  ([]
         )
 
+happyReduce_4 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_4 = happySpecReduce_2  2# happyReduction_4
 happyReduction_4 (HappyAbsSyn7  happy_var_2)
         (HappyAbsSyn8  happy_var_1)
@@ -187,6 +192,7 @@ happyReduction_4 (HappyAbsSyn7  happy_var_2)
         )
 happyReduction_4 _ _  = notHappyAtAll 
 
+happyReduce_5 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_5 = happyReduce 5# 3# happyReduction_5
 happyReduction_5 (_ `HappyStk`
         (HappyAbsSyn10  happy_var_4) `HappyStk`
@@ -198,6 +204,7 @@ happyReduction_5 (_ `HappyStk`
                  (Device (T.pack happy_var_2) Nothing (macAddr happy_var_4) (ipAddr happy_var_4) (subnetRange happy_var_4) (ifaces happy_var_4)
         ) `HappyStk` happyRest
 
+happyReduce_6 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_6 = happySpecReduce_1  4# happyReduction_6
 happyReduction_6 (HappyTerminal (TokenString happy_var_1))
          =  HappyAbsSyn9
@@ -205,6 +212,7 @@ happyReduction_6 (HappyTerminal (TokenString happy_var_1))
         )
 happyReduction_6 _  = notHappyAtAll 
 
+happyReduce_7 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_7 = happySpecReduce_3  4# happyReduction_7
 happyReduction_7 (HappyTerminal (TokenNumber happy_var_3))
         _
@@ -214,6 +222,7 @@ happyReduction_7 (HappyTerminal (TokenNumber happy_var_3))
         )
 happyReduction_7 _ _ _  = notHappyAtAll 
 
+happyReduce_8 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_8 = happyReduce 16# 5# happyReduction_8
 happyReduction_8 (_ `HappyStk`
         (HappyAbsSyn11  happy_var_15) `HappyStk`
@@ -241,11 +250,13 @@ happyReduction_8 (_ `HappyStk`
         }
         ) `HappyStk` happyRest
 
+happyReduce_9 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_9 = happySpecReduce_0  6# happyReduction_9
 happyReduction_9  =  HappyAbsSyn11
                  ([]
         )
 
+happyReduce_10 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_10 = happySpecReduce_1  6# happyReduction_10
 happyReduction_10 (HappyTerminal (TokenString happy_var_1))
          =  HappyAbsSyn11
@@ -253,6 +264,7 @@ happyReduction_10 (HappyTerminal (TokenString happy_var_1))
         )
 happyReduction_10 _  = notHappyAtAll 
 
+happyReduce_11 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_11 = happySpecReduce_3  6# happyReduction_11
 happyReduction_11 (HappyAbsSyn11  happy_var_3)
         _
@@ -262,6 +274,7 @@ happyReduction_11 (HappyAbsSyn11  happy_var_3)
         )
 happyReduction_11 _ _ _  = notHappyAtAll 
 
+happyReduce_12 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_12 = happyReduce 4# 7# happyReduction_12
 happyReduction_12 (_ `HappyStk`
         (HappyAbsSyn13  happy_var_3) `HappyStk`
@@ -272,11 +285,13 @@ happyReduction_12 (_ `HappyStk`
                  (happy_var_3
         ) `HappyStk` happyRest
 
+happyReduce_13 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_13 = happySpecReduce_0  8# happyReduction_13
 happyReduction_13  =  HappyAbsSyn13
                  ([]
         )
 
+happyReduce_14 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_14 = happySpecReduce_1  8# happyReduction_14
 happyReduction_14 (HappyAbsSyn14  happy_var_1)
          =  HappyAbsSyn13
@@ -284,6 +299,7 @@ happyReduction_14 (HappyAbsSyn14  happy_var_1)
         )
 happyReduction_14 _  = notHappyAtAll 
 
+happyReduce_15 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_15 = happySpecReduce_3  8# happyReduction_15
 happyReduction_15 (HappyAbsSyn13  happy_var_3)
         _
@@ -293,6 +309,7 @@ happyReduction_15 (HappyAbsSyn13  happy_var_3)
         )
 happyReduction_15 _ _ _  = notHappyAtAll 
 
+happyReduce_16 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_16 = happyReduce 10# 9# happyReduction_16
 happyReduction_16 ((HappyTerminal (TokenString happy_var_10)) `HappyStk`
         _ `HappyStk`
@@ -309,24 +326,28 @@ happyReduction_16 ((HappyTerminal (TokenString happy_var_10)) `HappyStk`
                  (Packet (T.pack happy_var_1) (readIP happy_var_3) (readIP happy_var_5) 0 happy_var_8 happy_var_7 (T.pack happy_var_10) (T.pack happy_var_10)
         ) `HappyStk` happyRest
 
+happyReduce_17 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_17 = happySpecReduce_1  10# happyReduction_17
 happyReduction_17 _
          =  HappyAbsSyn15
                  (TCP
         )
 
+happyReduce_18 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_18 = happySpecReduce_1  10# happyReduction_18
 happyReduction_18 _
          =  HappyAbsSyn15
                  (UDP
         )
 
+happyReduce_19 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_19 = happySpecReduce_1  10# happyReduction_19
 happyReduction_19 _
          =  HappyAbsSyn15
                  (ANY
         )
 
+happyReduce_20 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_20 = happyReduce 4# 11# happyReduction_20
 happyReduction_20 (_ `HappyStk`
         (HappyAbsSyn17  happy_var_3) `HappyStk`
@@ -337,11 +358,13 @@ happyReduction_20 (_ `HappyStk`
                  (M.fromList happy_var_3
         ) `HappyStk` happyRest
 
+happyReduce_21 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_21 = happySpecReduce_0  12# happyReduction_21
 happyReduction_21  =  HappyAbsSyn17
                  ([]
         )
 
+happyReduce_22 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_22 = happySpecReduce_2  12# happyReduction_22
 happyReduction_22 (HappyAbsSyn17  happy_var_2)
         (HappyAbsSyn18  happy_var_1)
@@ -350,6 +373,7 @@ happyReduction_22 (HappyAbsSyn17  happy_var_2)
         )
 happyReduction_22 _ _  = notHappyAtAll 
 
+happyReduce_23 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_23 = happySpecReduce_1  13# happyReduction_23
 happyReduction_23 (HappyAbsSyn19  happy_var_1)
          =  HappyAbsSyn18
@@ -357,6 +381,7 @@ happyReduction_23 (HappyAbsSyn19  happy_var_1)
         )
 happyReduction_23 _  = notHappyAtAll 
 
+happyReduce_24 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_24 = happyReduce 5# 14# happyReduction_24
 happyReduction_24 (_ `HappyStk`
         (HappyAbsSyn21  happy_var_4) `HappyStk`
@@ -368,29 +393,34 @@ happyReduction_24 (_ `HappyStk`
                  ((happy_var_2, reverse happy_var_4)
         ) `HappyStk` happyRest
 
+happyReduce_25 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_25 = happySpecReduce_1  15# happyReduction_25
 happyReduction_25 _
          =  HappyAbsSyn20
                  (Input
         )
 
+happyReduce_26 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_26 = happySpecReduce_1  15# happyReduction_26
 happyReduction_26 _
          =  HappyAbsSyn20
                  (Output
         )
 
+happyReduce_27 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_27 = happySpecReduce_1  15# happyReduction_27
 happyReduction_27 _
          =  HappyAbsSyn20
                  (Forward
         )
 
+happyReduce_28 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_28 = happySpecReduce_0  16# happyReduction_28
 happyReduction_28  =  HappyAbsSyn21
                  ([]
         )
 
+happyReduce_29 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_29 = happySpecReduce_1  16# happyReduction_29
 happyReduction_29 (HappyAbsSyn22  happy_var_1)
          =  HappyAbsSyn21
@@ -398,6 +428,7 @@ happyReduction_29 (HappyAbsSyn22  happy_var_1)
         )
 happyReduction_29 _  = notHappyAtAll 
 
+happyReduce_30 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_30 = happySpecReduce_2  17# happyReduction_30
 happyReduction_30 _
         (HappyAbsSyn23  happy_var_1)
@@ -406,6 +437,7 @@ happyReduction_30 _
         )
 happyReduction_30 _ _  = notHappyAtAll 
 
+happyReduce_31 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_31 = happySpecReduce_3  17# happyReduction_31
 happyReduction_31 (HappyAbsSyn22  happy_var_3)
         _
@@ -415,6 +447,7 @@ happyReduction_31 (HappyAbsSyn22  happy_var_3)
         )
 happyReduction_31 _ _ _  = notHappyAtAll 
 
+happyReduce_32 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_32 = happyReduce 4# 18# happyReduction_32
 happyReduction_32 ((HappyAbsSyn24  happy_var_4) `HappyStk`
         _ `HappyStk`
@@ -425,24 +458,28 @@ happyReduction_32 ((HappyAbsSyn24  happy_var_4) `HappyStk`
                  (Rule (T.pack "rule") happy_var_1 happy_var_4 Nothing
         ) `HappyStk` happyRest
 
+happyReduce_33 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_33 = happySpecReduce_1  19# happyReduction_33
 happyReduction_33 _
          =  HappyAbsSyn24
                  (Accept
         )
 
+happyReduce_34 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_34 = happySpecReduce_1  19# happyReduction_34
 happyReduction_34 _
          =  HappyAbsSyn24
                  (Drop
         )
 
+happyReduce_35 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_35 = happySpecReduce_1  19# happyReduction_35
 happyReduction_35 _
          =  HappyAbsSyn24
                  (Reject
         )
 
+happyReduce_36 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_36 = happySpecReduce_1  20# happyReduction_36
 happyReduction_36 (HappyAbsSyn26  happy_var_1)
          =  HappyAbsSyn25
@@ -450,6 +487,7 @@ happyReduction_36 (HappyAbsSyn26  happy_var_1)
         )
 happyReduction_36 _  = notHappyAtAll 
 
+happyReduce_37 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_37 = happySpecReduce_2  20# happyReduction_37
 happyReduction_37 (HappyAbsSyn26  happy_var_2)
         (HappyAbsSyn25  happy_var_1)
@@ -458,6 +496,7 @@ happyReduction_37 (HappyAbsSyn26  happy_var_2)
         )
 happyReduction_37 _ _  = notHappyAtAll 
 
+happyReduce_38 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_38 = happySpecReduce_3  20# happyReduction_38
 happyReduction_38 (HappyAbsSyn26  happy_var_3)
         _
@@ -467,6 +506,7 @@ happyReduction_38 (HappyAbsSyn26  happy_var_3)
         )
 happyReduction_38 _ _ _  = notHappyAtAll 
 
+happyReduce_39 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_39 = happySpecReduce_3  20# happyReduction_39
 happyReduction_39 (HappyAbsSyn26  happy_var_3)
         _
@@ -476,6 +516,7 @@ happyReduction_39 (HappyAbsSyn26  happy_var_3)
         )
 happyReduction_39 _ _ _  = notHappyAtAll 
 
+happyReduce_40 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_40 = happySpecReduce_2  20# happyReduction_40
 happyReduction_40 (HappyAbsSyn26  happy_var_2)
         _
@@ -484,6 +525,7 @@ happyReduction_40 (HappyAbsSyn26  happy_var_2)
         )
 happyReduction_40 _ _  = notHappyAtAll 
 
+happyReduce_41 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_41 = happySpecReduce_3  21# happyReduction_41
 happyReduction_41 (HappyAbsSyn27  happy_var_3)
         _
@@ -493,6 +535,7 @@ happyReduction_41 (HappyAbsSyn27  happy_var_3)
         )
 happyReduction_41 _ _ _  = notHappyAtAll 
 
+happyReduce_42 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_42 = happySpecReduce_3  21# happyReduction_42
 happyReduction_42 (HappyAbsSyn27  happy_var_3)
         _
@@ -502,6 +545,7 @@ happyReduction_42 (HappyAbsSyn27  happy_var_3)
         )
 happyReduction_42 _ _ _  = notHappyAtAll 
 
+happyReduce_43 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_43 = happySpecReduce_3  21# happyReduction_43
 happyReduction_43 (HappyAbsSyn15  happy_var_3)
         _
@@ -511,6 +555,7 @@ happyReduction_43 (HappyAbsSyn15  happy_var_3)
         )
 happyReduction_43 _ _ _  = notHappyAtAll 
 
+happyReduce_44 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_44 = happySpecReduce_3  21# happyReduction_44
 happyReduction_44 (HappyTerminal (TokenString happy_var_3))
         _
@@ -520,6 +565,7 @@ happyReduction_44 (HappyTerminal (TokenString happy_var_3))
         )
 happyReduction_44 _ _ _  = notHappyAtAll 
 
+happyReduce_45 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_45 = happySpecReduce_3  21# happyReduction_45
 happyReduction_45 (HappyTerminal (TokenString happy_var_3))
         _
@@ -529,6 +575,7 @@ happyReduction_45 (HappyTerminal (TokenString happy_var_3))
         )
 happyReduction_45 _ _ _  = notHappyAtAll 
 
+happyReduce_46 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_46 = happySpecReduce_3  21# happyReduction_46
 happyReduction_46 (HappyAbsSyn29  happy_var_3)
         _
@@ -538,6 +585,7 @@ happyReduction_46 (HappyAbsSyn29  happy_var_3)
         )
 happyReduction_46 _ _ _  = notHappyAtAll 
 
+happyReduce_47 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_47 = happySpecReduce_3  21# happyReduction_47
 happyReduction_47 (HappyAbsSyn29  happy_var_3)
         _
@@ -547,6 +595,7 @@ happyReduction_47 (HappyAbsSyn29  happy_var_3)
         )
 happyReduction_47 _ _ _  = notHappyAtAll 
 
+happyReduce_48 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_48 = happySpecReduce_3  21# happyReduction_48
 happyReduction_48 (HappyAbsSyn28  happy_var_3)
         _
@@ -556,6 +605,7 @@ happyReduction_48 (HappyAbsSyn28  happy_var_3)
         )
 happyReduction_48 _ _ _  = notHappyAtAll 
 
+happyReduce_49 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_49 = happySpecReduce_3  21# happyReduction_49
 happyReduction_49 (HappyAbsSyn28  happy_var_3)
         _
@@ -565,6 +615,7 @@ happyReduction_49 (HappyAbsSyn28  happy_var_3)
         )
 happyReduction_49 _ _ _  = notHappyAtAll 
 
+happyReduce_50 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_50 = happySpecReduce_3  21# happyReduction_50
 happyReduction_50 _
         (HappyAbsSyn25  happy_var_2)
@@ -574,6 +625,7 @@ happyReduction_50 _
         )
 happyReduction_50 _ _ _  = notHappyAtAll 
 
+happyReduce_51 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_51 = happySpecReduce_1  22# happyReduction_51
 happyReduction_51 (HappyTerminal (TokenIP happy_var_1))
          =  HappyAbsSyn27
@@ -581,6 +633,7 @@ happyReduction_51 (HappyTerminal (TokenIP happy_var_1))
         )
 happyReduction_51 _  = notHappyAtAll 
 
+happyReduce_52 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_52 = happySpecReduce_3  22# happyReduction_52
 happyReduction_52 (HappyAbsSyn27  happy_var_3)
         _
@@ -590,6 +643,7 @@ happyReduction_52 (HappyAbsSyn27  happy_var_3)
         )
 happyReduction_52 _ _ _  = notHappyAtAll 
 
+happyReduce_53 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_53 = happySpecReduce_3  23# happyReduction_53
 happyReduction_53 (HappyTerminal (TokenNumber happy_var_3))
         _
@@ -599,6 +653,7 @@ happyReduction_53 (HappyTerminal (TokenNumber happy_var_3))
         )
 happyReduction_53 _ _ _  = notHappyAtAll 
 
+happyReduce_54 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_54 = happyReduce 5# 23# happyReduction_54
 happyReduction_54 ((HappyAbsSyn28  happy_var_5) `HappyStk`
         _ `HappyStk`
@@ -610,6 +665,7 @@ happyReduction_54 ((HappyAbsSyn28  happy_var_5) `HappyStk`
                  ((happy_var_1, happy_var_3) : happy_var_5
         ) `HappyStk` happyRest
 
+happyReduce_55 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_55 = happySpecReduce_1  24# happyReduction_55
 happyReduction_55 (HappyTerminal (TokenNumber happy_var_1))
          =  HappyAbsSyn29
@@ -617,6 +673,7 @@ happyReduction_55 (HappyTerminal (TokenNumber happy_var_1))
         )
 happyReduction_55 _  = notHappyAtAll 
 
+happyReduce_56 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_56 = happySpecReduce_1  24# happyReduction_56
 happyReduction_56 (HappyAbsSyn30  happy_var_1)
          =  HappyAbsSyn29
@@ -624,6 +681,7 @@ happyReduction_56 (HappyAbsSyn30  happy_var_1)
         )
 happyReduction_56 _  = notHappyAtAll 
 
+happyReduce_57 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_57 = happySpecReduce_1  25# happyReduction_57
 happyReduction_57 (HappyTerminal (TokenNumber happy_var_1))
          =  HappyAbsSyn30
@@ -631,6 +689,7 @@ happyReduction_57 (HappyTerminal (TokenNumber happy_var_1))
         )
 happyReduction_57 _  = notHappyAtAll 
 
+happyReduce_58 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_58 = happySpecReduce_3  25# happyReduction_58
 happyReduction_58 (HappyAbsSyn30  happy_var_3)
         _
@@ -641,6 +700,7 @@ happyReduction_58 (HappyAbsSyn30  happy_var_3)
 happyReduction_58 _ _ _  = notHappyAtAll 
 
 happyTerminalToTok term = case term of {
+        TokenEOF -> 52#;
         TokenDevice happy_dollar_dollar -> 2#;
         TokenDeviceDescription -> 3#;
         TokenDeviceMac -> 4#;
@@ -695,185 +755,166 @@ happyTerminalToTok term = case term of {
         }
 {-# NOINLINE happyTerminalToTok #-}
 
-happyLex kend  _kmore []       = kend notHappyAtAll []
-happyLex _kend kmore  (tk:tks) = kmore (happyTerminalToTok tk) tk tks
+happyLex kend kmore = lexer (\tk -> case tk of {
+        TokenEOF -> kend tk;
+        _ -> kmore (happyTerminalToTok tk) tk })
 {-# INLINE happyLex #-}
 
-happyNewToken action sts stk = happyLex (\tk -> happyDoAction 52# notHappyAtAll action sts stk) (\i tk -> happyDoAction i tk action sts stk)
+happyNewToken action sts stk = happyLex (\tk -> happyDoAction 52# tk action sts stk) (\i tk -> happyDoAction i tk action sts stk)
 
-happyReport 52# tk explist resume tks = happyReport' tks explist resume
-happyReport _ tk explist resume tks = happyReport' (tk:tks) explist (\tks -> resume (Happy_Prelude.tail tks))
+happyReport 52# = happyReport'
+happyReport _ = happyReport'
 
 
-newtype HappyIdentity a = HappyIdentity a
-happyIdentity = HappyIdentity
-happyRunIdentity (HappyIdentity a) = a
+happyThen :: () => (P a) -> (a -> (P b)) -> (P b)
+happyThen = (thenP)
+happyReturn :: () => a -> (P a)
+happyReturn = (returnP)
+happyDoParse :: () => Happy_GHC_Exts.Int# -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 
-instance Happy_Prelude.Functor HappyIdentity where
-    fmap f (HappyIdentity a) = HappyIdentity (f a)
+happyNewToken :: () => Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> (P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _))
 
-instance Applicative HappyIdentity where
-    pure  = HappyIdentity
-    (<*>) = ap
-instance Happy_Prelude.Monad HappyIdentity where
-    return = pure
-    (HappyIdentity p) >>= q = q p
+happyDoAction :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> (P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _))
 
-happyThen :: () => (HappyIdentity a) -> (a -> (HappyIdentity b)) -> (HappyIdentity b)
-happyThen = (Happy_Prelude.>>=)
-happyReturn :: () => a -> (HappyIdentity a)
-happyReturn = (Happy_Prelude.return)
-happyThen1 m k tks = (Happy_Prelude.>>=) m (\a -> k a tks)
-happyFmap1 f m tks = happyThen (m tks) (\a -> happyReturn (f a))
-happyReturn1 :: () => a -> b -> (HappyIdentity a)
-happyReturn1 = \a tks -> (Happy_Prelude.return) a
-happyReport' :: () => [(Token)] -> [Happy_Prelude.String] -> ([(Token)] -> (HappyIdentity a)) -> (HappyIdentity a)
-happyReport' = (\tokens expected resume -> HappyIdentity Happy_Prelude.$ happyError tokens)
+happyReduceArr :: () => Happy_Data_Array.Array Happy_Prelude.Int (Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> (P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)))
 
-happyAbort :: () => [(Token)] -> (HappyIdentity a)
+happyThen1 :: () => P a -> (a -> P b) -> P b
+happyThen1 = happyThen
+happyFmap1 f m = happyThen m (\a -> happyReturn (f a))
+happyReturn1 :: () => a -> (P a)
+happyReturn1 = happyReturn
+happyReport' :: () => (Token) -> [Happy_Prelude.String] -> (P a) -> (P a)
+happyReport' = (\tokens expected resume -> happyError)
+
+happyAbort :: () => (P a)
 happyAbort = Happy_Prelude.error "Called abort handler in non-resumptive parser"
 
-parseScript tks = happyRunIdentity happySomeParser where
- happySomeParser = happyThen (happyDoParse 0# tks) (\x -> case x of {HappyAbsSyn5 z -> happyReturn z; _other -> notHappyAtAll })
+parseScript = happySomeParser where
+ happySomeParser = happyThen (happyDoParse 0#) (\x -> case x of {HappyAbsSyn5 z -> happyReturn z; _other -> notHappyAtAll })
 
 happySeq = happyDontSeq
 
 
--- Error handling function that Happy expects
-happyError :: [Token] -> a
-happyError tokens = error $ "Parse error near tokens: " ++ show (take 5 tokens)
+-- obtener numero de linea del estado de la mónada      
+getLineNo :: P Int
+getLineNo = \s l -> Ok l
 
 
-data DeviceFieldsData = DeviceFieldsData
-    { macAddr :: T.Text
-    , ipAddr :: IPV4.IPv4
-    , subnetRange :: Maybe IPV4.IPv4Range
-    , ifaces :: [Interface]
-    }
+lexer :: (Token -> P a) -> P a
+lexer cont s = \line -> 
+    case s of
+        [] -> cont TokenEOF [] line
+        ('\n':cs) -> lexer cont cs (line + 1)
+        (c:cs) 
+            | isSpace c -> lexer cont cs line
+            | isDigit c -> lexIPOrNumber cont (c:cs) s line
+            | c == '"'  -> lexString cont cs s line
+            | isAlpha c -> lexKeywordOrIdent cont (c:cs) s line
+            | otherwise -> case c of
+                '&' -> cont TokenAnd cs line
+                '|' -> cont TokenOr cs line
+                '!' -> cont TokenNot cs line
+                '(' -> cont TokenLParen cs line
+                ')' -> cont TokenRParen cs line
+                '/' -> cont TokenSlash cs line
+                '{' -> cont TokenOpenBracket cs line
+                '}' -> cont TokenCloseBracket cs line
+                '[' -> cont TokenOpenSquareBracket cs line
+                ']' -> cont TokenCloseSquareBracket cs line
+                '=' -> cont TokenAssign cs line
+                ';' -> cont TokenSemicolon cs line
+                ':' -> cont TokenColon cs line
+                ',' -> cont TokenComma cs line
+                '-' -> if not (null cs) && head cs == '>' 
+                       then cont TokenArrow (tail cs) line
+                       else cont TokenDash cs line
+                _   -> Failed $ "Línea " ++ show line ++ ": Caracter inesperado " ++ [c]
 
-lexer :: String -> [Token]
-lexer = lexer' 1
-  where
-    lexer' :: Int -> String -> [Token]
-    lexer' _ [] = []
-    lexer' lineNo s@(c:cs)
-        | isSpace c = lexer' (if c == '\n' then lineNo + 1 else lineNo) cs
-        | c == '-' && not (null cs) && head cs == '>' = TokenArrow : lexer' lineNo (tail cs)
-        | c == '-' = TokenDash : lexer' lineNo cs
-        | c == '&' = TokenAnd : lexer' lineNo cs
-        | c == '|' = TokenOr : lexer' lineNo cs
-        | c == '!' = TokenNot : lexer' lineNo cs
-        | c == '(' = TokenLParen : lexer' lineNo cs
-        | c == ')' = TokenRParen : lexer' lineNo cs
-        | c == '/' = TokenSlash : lexer' lineNo cs
-        | c == '{' = TokenOpenBracket : lexer' lineNo cs
-        | c == '}' = TokenCloseBracket : lexer' lineNo cs
-        | c == '[' = TokenOpenSquareBracket : lexer' lineNo cs
-        | c == ']' = TokenCloseSquareBracket : lexer' lineNo cs
-        | c == '=' = TokenAssign : lexer' lineNo cs
-        | c == ';' = TokenSemicolon : lexer' lineNo cs
-        | c == ':' = TokenColon : lexer' lineNo cs
-        | c == ',' = TokenComma : lexer' lineNo cs
-        | isDigit c = lexIPOrNumber lineNo s  
-        | c == '"' = lexString lineNo cs
-        | isAlpha c = lexKeywordOrIdent lineNo s
-        | otherwise = error $ "Unexpected character '" ++ [c] ++ "' at line " ++ show lineNo
+-- numero detectado: retornar token segun si es IP o un natural
+lexIPOrNumber :: (Token -> P a) -> String -> P a
+lexIPOrNumber cont tokenRaw = \_ line ->
+    let (tokenStr, rest) = span (\c -> isDigit c || c == '.') tokenRaw
+        token = if any (== '.') tokenStr
+                then TokenIP tokenStr
+                else TokenNumber (read tokenStr)
+    in cont token rest line
 
-    -- Number detected: check whether it's an IP address or a number and get its respective token
-    lexIPOrNumber :: Int -> String -> [Token]
-    lexIPOrNumber lineNo s = 
-        -- Read a token that could be an IP address (digits and dots) or just a number
-        let (token, rest) = span (\c -> isDigit c || c == '.') s
-        in if any (== '.') token
-            then if isValidIP token
-                then TokenIP token : lexer' lineNo rest
-                else error $ "Invalid IP address format: " ++ token
-            else TokenNumber (read token) : lexer' lineNo rest
+-- sacar validacion de ip
+lexString :: (Token -> P a) -> String -> P a
+lexString cont s = \_ line -> 
+    case break (== '"') s of
+        (str, '"':rest) -> cont (TokenString str) rest line
+        _               -> Failed $ "String no cerrado en línea " ++ show line
 
-    -- unused for now
-    lexNumber :: Int -> String -> [Token]
-    lexNumber lineNo s = 
-        let (num, rest) = span isDigit s
-        in TokenNumber (read num) : lexer' lineNo rest
 
-    lexString :: Int -> String -> [Token]
-    lexString lineNo s =
-        case break (== '"') s of
-            (str, '"':rest) -> 
-                -- Check if the string is a valid IP address
-                if isValidIP str 
-                then TokenIP str : lexer' lineNo rest
-                else TokenString str : lexer' lineNo rest
-            _ -> error $ "Unterminated string at line " ++ show lineNo
+lexKeywordOrIdent :: (Token -> P a) -> String -> P a
+lexKeywordOrIdent cont tokenRaw = \_ line -> 
+    let (ident, rest) = span (\c -> isAlphaNum c || c == '.' || c == '-') tokenRaw
+        token = case ident of
+            "device"     -> TokenDevice ident
+            "desc"       -> TokenDeviceDescription
+            "mac"        -> TokenDeviceMac
+            "ip"         -> TokenDeviceIP
+            "subnet"     -> TokenDeviceSubnet
+            "interfaces" -> TokenDeviceInterfaces
+            "packets"    -> TokenPackets
+            "rules"      -> TokenRules
+            "chain"      -> TokenChain
+            "INPUT"      -> TokenInput
+            "OUTPUT"     -> TokenOutput
+            "FORWARD"    -> TokenForward
+            "tcp"        -> TokenTCP
+            "udp"        -> TokenUDP
+            "any"        -> TokenANY
+            "via"        -> TokenVia
+            "ACCEPT"     -> TokenAccept
+            "DROP"       -> TokenDrop
+            "REJECT"     -> TokenReject
+            "network"    -> TokenNetwork
+            "srcip"      -> TokenSrcIP
+            "dstip"      -> TokenDstIP
+            "prot"       -> TokenProt
+            "inif"       -> TokenInIf
+            "outif"      -> TokenOutIf
+            "srcp"       -> TokenSrcPort
+            "dstp"       -> TokenDstPort
+            "srcsubnet"  -> TokenSrcSubnet
+            "dstsubnet"  -> TokenDstSubnet
+            "do"         -> TokenDo
+            _            -> if isValidIP ident then TokenIP ident else TokenIdent ident
+    in cont token rest line
 
-    lexKeywordOrIdent :: Int -> String -> [Token]
-    lexKeywordOrIdent lineNo s =
-        let (ident, rest) = span (\c -> isAlphaNum c || c == '.' || c == '-') s
-            token = case ident of
-                "device" -> TokenDevice ident
-                "desc" -> TokenDeviceDescription
-                "mac" -> TokenDeviceMac
-                "ip" -> TokenDeviceIP
-                "subnet" -> TokenDeviceSubnet
-                "interfaces" -> TokenDeviceInterfaces
-                "packets" -> TokenPackets
-                "rules" -> TokenRules
-                "chain" -> TokenChain
-                "INPUT" -> TokenInput
-                "OUTPUT" -> TokenOutput
-                "FORWARD" -> TokenForward
-                "tcp" -> TokenTCP
-                "udp" -> TokenUDP
-                "any" -> TokenANY
-                "via" -> TokenVia
-                "ACCEPT" -> TokenAccept
-                "DROP" -> TokenDrop
-                "REJECT" -> TokenReject
-                "network" -> TokenNetwork
-                "srcip" -> TokenSrcIP
-                "dstip" -> TokenDstIP
-                "prot" -> TokenProt
-                "inif" -> TokenInIf
-                "outif" -> TokenOutIf
-                "srcp" -> TokenSrcPort
-                "dstp" -> TokenDstPort
-                "srcsubnet" -> TokenSrcSubnet
-                "dstsubnet" -> TokenDstSubnet
-                "do" -> TokenDo
-                _ -> if isValidIP ident then TokenIP ident else TokenIdent ident
-        in token : lexer' lineNo rest
-
-    -- Helper function to check if a string is a valid IP address
-    isValidIP :: String -> Bool
-    isValidIP s = 
-        let parts = split '.' s
-        in length parts == 4 && all (\p -> not (null p) && all isDigit p && let n = read p in n >= 0 && n <= 255) parts
+-- helper (si voy a hacer AST validation, no hace falta aca)
+isValidIP :: String -> Bool
+isValidIP s = 
+    let parts = split '.' s
+    in length parts == 4 && all (\p -> not (null p) && all isDigit p && let n = read p in n >= 0 && n <= 255) parts
     
-    split :: Char -> String -> [String]
-    split _ [] = []
-    split c s = let (part, rest) = break (== c) s in part : split c (drop 1 rest)
+split :: Char -> String -> [String]
+split _ [] = []
+split c s = let (part, rest) = break (== c) s in part : split c (drop 1 rest)
 
--- Helper functions for IP parsing
+-- funcion helper para leer una direccion IPv4 desde string
 readIP :: String -> IPV4.IPv4
 readIP ipStr = case IPV4.decodeString ipStr of
     Just ip -> ip
     Nothing -> error $ "Invalid IP address: " ++ ipStr
 
-
+-- funcion helper para leer un rango de subnet IPv4 desde string
 readSubnet :: String -> Int -> IPV4.IPv4Range
 readSubnet ipStr prefix = case IPV4.decodeString ipStr of
     Just ip -> IPV4.range ip (fromIntegral prefix)
     Nothing -> error $ "Invalid IP address in subnet: " ++ ipStr
 
--- Helper function to parse a subnet string in the form "192.168.1.0/24"
+-- helper para parsear una string que representa una subnet, e.g. "192.168.1.0/24"
 parseSubnet :: String -> IPV4.IPv4Range
 parseSubnet s = 
     let (ipStr, rest) = break (== '/') s
         prefixStr = drop 1 rest
-        prefix = read prefixStr :: Int
+        prefix = read prefixStr
     in readSubnet ipStr prefix
 
--- precond: grammar guarantees list has at least 1 element.
+-- precond: la gramatica debe garantizar que la lista de strings tiene al menos 1 elemento.
 conjunctIPMatches :: [ String ] -> (IPV4.IPv4 -> Match) -> Match
 conjunctIPMatches [ipStr] construct = construct (readIP ipStr)
 conjunctIPMatches (ipStr : ipStrs) construct = AndMatch (construct (readIP ipStr)) (conjunctIPMatches ipStrs construct)
@@ -884,14 +925,13 @@ conjunctIPRangeMatches ((ipRangeStr, n) : ipRangeStrs) c = AndMatch (c (readSubn
 
 
 
--- Main parsing function - parseScript returns Info directly, not Either
-parseFirewall :: String -> Info
-parseFirewall input = parseScript (lexer input)
+-- Manejador de errores de parseo usado por Happy
+happyError :: P a
+happyError = \s i -> Failed $ "Linea " ++ show i ++ ": Error de parseo cerca de ----->" ++ take 10 s ++ "<-----"
 
-
--- testing function
-debugTokens :: String -> IO ()
-debugTokens input = mapM_ print (lexer input)
+-- Funcion a invocar para parsear.
+parseFirewall :: String -> ParseResult Info
+parseFirewall input = parseScript input 1
 -- $Id: GenericTemplate.hs,v 1.26 2005/01/14 14:47:22 simonmar Exp $
 
 #if !defined(__GLASGOW_HASKELL__)

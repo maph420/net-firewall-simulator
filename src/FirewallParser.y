@@ -1,5 +1,5 @@
 {
-module FirewallParser (parseFirewall, debugTokens) where
+module FirewallParser (parseFirewall) where
 
 import Common
 import qualified Data.Text as T
@@ -7,11 +7,14 @@ import qualified Data.Map.Strict as M
 import qualified Net.IPv4 as IPV4
 import Data.Char (isSpace, isAlpha, isAlphaNum, isDigit)
 import Data.Word (Word8)
+import Monads
 }
 
-
+%monad { P } { thenP } { returnP }
 %name parseScript
 %tokentype { Token }
+%lexer {lexer} {TokenEOF}
+
 
 %token
     device          { TokenDevice $$ }
@@ -165,141 +168,127 @@ PortList : NUMBER { [$1] }
     | NUMBER ',' PortList { $1 : $3 }
 
 {
--- Error handling function that Happy expects
-happyError :: [Token] -> a
-happyError tokens = error $ "Parse error near tokens: " ++ show (take 5 tokens)
+
+-- obtener numero de linea del estado de la mónada      
+getLineNo :: P Int
+getLineNo = \s l -> Ok l
 
 
-data DeviceFieldsData = DeviceFieldsData
-    { macAddr :: T.Text
-    , ipAddr :: IPV4.IPv4
-    , subnetRange :: Maybe IPV4.IPv4Range
-    , ifaces :: [Interface]
-    }
+lexer :: (Token -> P a) -> P a
+lexer cont s = \line -> 
+    case s of
+        [] -> cont TokenEOF [] line
+        ('\n':cs) -> lexer cont cs (line + 1)
+        (c:cs) 
+            | isSpace c -> lexer cont cs line
+            | isDigit c -> lexIPOrNumber cont (c:cs) s line
+            | c == '"'  -> lexString cont cs s line
+            | isAlpha c -> lexKeywordOrIdent cont (c:cs) s line
+            | otherwise -> case c of
+                '&' -> cont TokenAnd cs line
+                '|' -> cont TokenOr cs line
+                '!' -> cont TokenNot cs line
+                '(' -> cont TokenLParen cs line
+                ')' -> cont TokenRParen cs line
+                '/' -> cont TokenSlash cs line
+                '{' -> cont TokenOpenBracket cs line
+                '}' -> cont TokenCloseBracket cs line
+                '[' -> cont TokenOpenSquareBracket cs line
+                ']' -> cont TokenCloseSquareBracket cs line
+                '=' -> cont TokenAssign cs line
+                ';' -> cont TokenSemicolon cs line
+                ':' -> cont TokenColon cs line
+                ',' -> cont TokenComma cs line
+                '-' -> if not (null cs) && head cs == '>' 
+                       then cont TokenArrow (tail cs) line
+                       else cont TokenDash cs line
+                _   -> Failed $ "Línea " ++ show line ++ ": Caracter inesperado " ++ [c]
 
-lexer :: String -> [Token]
-lexer = lexer' 1
-  where
-    lexer' :: Int -> String -> [Token]
-    lexer' _ [] = []
-    lexer' lineNo s@(c:cs)
-        | isSpace c = lexer' (if c == '\n' then lineNo + 1 else lineNo) cs
-        | c == '-' && not (null cs) && head cs == '>' = TokenArrow : lexer' lineNo (tail cs)
-        | c == '-' = TokenDash : lexer' lineNo cs
-        | c == '&' = TokenAnd : lexer' lineNo cs
-        | c == '|' = TokenOr : lexer' lineNo cs
-        | c == '!' = TokenNot : lexer' lineNo cs
-        | c == '(' = TokenLParen : lexer' lineNo cs
-        | c == ')' = TokenRParen : lexer' lineNo cs
-        | c == '/' = TokenSlash : lexer' lineNo cs
-        | c == '{' = TokenOpenBracket : lexer' lineNo cs
-        | c == '}' = TokenCloseBracket : lexer' lineNo cs
-        | c == '[' = TokenOpenSquareBracket : lexer' lineNo cs
-        | c == ']' = TokenCloseSquareBracket : lexer' lineNo cs
-        | c == '=' = TokenAssign : lexer' lineNo cs
-        | c == ';' = TokenSemicolon : lexer' lineNo cs
-        | c == ':' = TokenColon : lexer' lineNo cs
-        | c == ',' = TokenComma : lexer' lineNo cs
-        | isDigit c = lexIPOrNumber lineNo s  
-        | c == '"' = lexString lineNo cs
-        | isAlpha c = lexKeywordOrIdent lineNo s
-        | otherwise = error $ "Unexpected character '" ++ [c] ++ "' at line " ++ show lineNo
+-- numero detectado: retornar token segun si es IP o un natural
+lexIPOrNumber :: (Token -> P a) -> String -> P a
+lexIPOrNumber cont tokenRaw = \_ line ->
+    let (tokenStr, rest) = span (\c -> isDigit c || c == '.') tokenRaw
+        token = if any (== '.') tokenStr
+                then TokenIP tokenStr
+                else TokenNumber (read tokenStr)
+    in cont token rest line
 
-    -- Number detected: check whether it's an IP address or a number and get its respective token
-    lexIPOrNumber :: Int -> String -> [Token]
-    lexIPOrNumber lineNo s = 
-        -- Read a token that could be an IP address (digits and dots) or just a number
-        let (token, rest) = span (\c -> isDigit c || c == '.') s
-        in if any (== '.') token
-            then if isValidIP token
-                then TokenIP token : lexer' lineNo rest
-                else error $ "Invalid IP address format: " ++ token
-            else TokenNumber (read token) : lexer' lineNo rest
+-- sacar validacion de ip
+lexString :: (Token -> P a) -> String -> P a
+lexString cont s = \_ line -> 
+    case break (== '"') s of
+        (str, '"':rest) -> cont (TokenString str) rest line
+        _               -> Failed $ "String no cerrado en línea " ++ show line
 
-    -- unused for now
-    lexNumber :: Int -> String -> [Token]
-    lexNumber lineNo s = 
-        let (num, rest) = span isDigit s
-        in TokenNumber (read num) : lexer' lineNo rest
 
-    lexString :: Int -> String -> [Token]
-    lexString lineNo s =
-        case break (== '"') s of
-            (str, '"':rest) -> 
-                -- Check if the string is a valid IP address
-                if isValidIP str 
-                then TokenIP str : lexer' lineNo rest
-                else TokenString str : lexer' lineNo rest
-            _ -> error $ "Unterminated string at line " ++ show lineNo
+lexKeywordOrIdent :: (Token -> P a) -> String -> P a
+lexKeywordOrIdent cont tokenRaw = \_ line -> 
+    let (ident, rest) = span (\c -> isAlphaNum c || c == '.' || c == '-') tokenRaw
+        token = case ident of
+            "device"     -> TokenDevice ident
+            "desc"       -> TokenDeviceDescription
+            "mac"        -> TokenDeviceMac
+            "ip"         -> TokenDeviceIP
+            "subnet"     -> TokenDeviceSubnet
+            "interfaces" -> TokenDeviceInterfaces
+            "packets"    -> TokenPackets
+            "rules"      -> TokenRules
+            "chain"      -> TokenChain
+            "INPUT"      -> TokenInput
+            "OUTPUT"     -> TokenOutput
+            "FORWARD"    -> TokenForward
+            "tcp"        -> TokenTCP
+            "udp"        -> TokenUDP
+            "any"        -> TokenANY
+            "via"        -> TokenVia
+            "ACCEPT"     -> TokenAccept
+            "DROP"       -> TokenDrop
+            "REJECT"     -> TokenReject
+            "network"    -> TokenNetwork
+            "srcip"      -> TokenSrcIP
+            "dstip"      -> TokenDstIP
+            "prot"       -> TokenProt
+            "inif"       -> TokenInIf
+            "outif"      -> TokenOutIf
+            "srcp"       -> TokenSrcPort
+            "dstp"       -> TokenDstPort
+            "srcsubnet"  -> TokenSrcSubnet
+            "dstsubnet"  -> TokenDstSubnet
+            "do"         -> TokenDo
+            _            -> if isValidIP ident then TokenIP ident else TokenIdent ident
+    in cont token rest line
 
-    lexKeywordOrIdent :: Int -> String -> [Token]
-    lexKeywordOrIdent lineNo s =
-        let (ident, rest) = span (\c -> isAlphaNum c || c == '.' || c == '-') s
-            token = case ident of
-                "device" -> TokenDevice ident
-                "desc" -> TokenDeviceDescription
-                "mac" -> TokenDeviceMac
-                "ip" -> TokenDeviceIP
-                "subnet" -> TokenDeviceSubnet
-                "interfaces" -> TokenDeviceInterfaces
-                "packets" -> TokenPackets
-                "rules" -> TokenRules
-                "chain" -> TokenChain
-                "INPUT" -> TokenInput
-                "OUTPUT" -> TokenOutput
-                "FORWARD" -> TokenForward
-                "tcp" -> TokenTCP
-                "udp" -> TokenUDP
-                "any" -> TokenANY
-                "via" -> TokenVia
-                "ACCEPT" -> TokenAccept
-                "DROP" -> TokenDrop
-                "REJECT" -> TokenReject
-                "network" -> TokenNetwork
-                "srcip" -> TokenSrcIP
-                "dstip" -> TokenDstIP
-                "prot" -> TokenProt
-                "inif" -> TokenInIf
-                "outif" -> TokenOutIf
-                "srcp" -> TokenSrcPort
-                "dstp" -> TokenDstPort
-                "srcsubnet" -> TokenSrcSubnet
-                "dstsubnet" -> TokenDstSubnet
-                "do" -> TokenDo
-                _ -> if isValidIP ident then TokenIP ident else TokenIdent ident
-        in token : lexer' lineNo rest
-
-    -- Helper function to check if a string is a valid IP address
-    isValidIP :: String -> Bool
-    isValidIP s = 
-        let parts = split '.' s
-        in length parts == 4 && all (\p -> not (null p) && all isDigit p && let n = read p in n >= 0 && n <= 255) parts
+-- helper (si voy a hacer AST validation, no hace falta aca)
+isValidIP :: String -> Bool
+isValidIP s = 
+    let parts = split '.' s
+    in length parts == 4 && all (\p -> not (null p) && all isDigit p && let n = read p in n >= 0 && n <= 255) parts
     
-    split :: Char -> String -> [String]
-    split _ [] = []
-    split c s = let (part, rest) = break (== c) s in part : split c (drop 1 rest)
+split :: Char -> String -> [String]
+split _ [] = []
+split c s = let (part, rest) = break (== c) s in part : split c (drop 1 rest)
 
--- Helper functions for IP parsing
+-- funcion helper para leer una direccion IPv4 desde string
 readIP :: String -> IPV4.IPv4
 readIP ipStr = case IPV4.decodeString ipStr of
     Just ip -> ip
     Nothing -> error $ "Invalid IP address: " ++ ipStr
 
-
+-- funcion helper para leer un rango de subnet IPv4 desde string
 readSubnet :: String -> Int -> IPV4.IPv4Range
 readSubnet ipStr prefix = case IPV4.decodeString ipStr of
     Just ip -> IPV4.range ip (fromIntegral prefix)
     Nothing -> error $ "Invalid IP address in subnet: " ++ ipStr
 
--- Helper function to parse a subnet string in the form "192.168.1.0/24"
+-- helper para parsear una string que representa una subnet, e.g. "192.168.1.0/24"
 parseSubnet :: String -> IPV4.IPv4Range
 parseSubnet s = 
     let (ipStr, rest) = break (== '/') s
         prefixStr = drop 1 rest
-        prefix = read prefixStr :: Int
+        prefix = read prefixStr
     in readSubnet ipStr prefix
 
--- precond: grammar guarantees list has at least 1 element.
+-- precond: la gramatica debe garantizar que la lista de strings tiene al menos 1 elemento.
 conjunctIPMatches :: [ String ] -> (IPV4.IPv4 -> Match) -> Match
 conjunctIPMatches [ipStr] construct = construct (readIP ipStr)
 conjunctIPMatches (ipStr : ipStrs) construct = AndMatch (construct (readIP ipStr)) (conjunctIPMatches ipStrs construct)
@@ -310,14 +299,13 @@ conjunctIPRangeMatches ((ipRangeStr, n) : ipRangeStrs) c = AndMatch (c (readSubn
 
 
 
--- Main parsing function - parseScript returns Info directly, not Either
-parseFirewall :: String -> Info
-parseFirewall input = parseScript (lexer input)
+-- Manejador de errores de parseo usado por Happy
+happyError :: P a
+happyError = \s i -> Failed $ "Linea " ++ show i ++ ": Error de parseo cerca de ----->" ++ take 10 s ++ "<-----"
 
-
--- testing function
-debugTokens :: String -> IO ()
-debugTokens input = mapM_ print (lexer input)
+-- Funcion a invocar para parsear.
+parseFirewall :: String -> ParseResult Info
+parseFirewall input = parseScript input 1
 }
 
 -- happy src/FirewallParser.y -o src/FirewallParser.hs --ghc

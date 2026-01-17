@@ -1,15 +1,7 @@
 -- definir aca las estructuras de datos del AST a utilizar
--- that alerts you when a module doesn't explicitly list the items it exports; 
--- instead of exporting everything by default, you should add a specific list
--- imagino que deberia exportar los constructores y observadores
 
 -- stack repl para terminal interactiva
 -- agregar al path: echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc    source ~/.bashrc
-
--- the import qualified syntax is used to bring a module's functions and data types 
--- into scope such that they must be explicitly prefixed by the module's name (or an alias) when used. 
-
--- ver si conviene usar data o newtype (depende si voy a usar el unwrapper o no)
 
 module Common
     (   Interface,
@@ -29,16 +21,18 @@ module Common
         Env(..),
         LogLevel(..),
         LogEntry(..),
-        Token(..)
+        Token(..),
+        ParseResult(..),
+        DeviceFieldsData(..)
     ) where
 
 import qualified Net.IPv4 as IPV4
 import qualified Data.Text as T
 import qualified Data.Map.Strict as M
 
--------------------------
--- general definitions --
--------------------------
+----------------------------
+-- definiciones generales --
+----------------------------
 
 -- deberia fijar las interfaces? o dejarlas simplemente como texto?
 type Interface = T.Text
@@ -56,7 +50,7 @@ data Action = Accept | Drop | Reject deriving (Eq,Show)
 data PacketTarget = Input | Output | Forward deriving (Eq, Show, Ord)
 
 ------------------------
--- network structures --
+-- estructuras de red --
 ------------------------
 
 data Device = Device {
@@ -70,9 +64,9 @@ data Device = Device {
 
 type Network = [Device]
 
------------------------------------
--- packets/deliveries structures --
------------------------------------
+------------------------------------
+-- estructuras de paquetes/envios --
+------------------------------------
 
 -- timestamp? a priori, no
 -- id, Text o int?
@@ -94,9 +88,9 @@ data Packet = Packet {
 
 type SentPackets = [Packet]
 
--------------------------
--- firewall structures --
--------------------------
+------------------------------
+-- estructuras del firewall --
+------------------------------
 
 -- operador algebraico al cual deben traducirse las sentencias durante el parseo
 
@@ -218,5 +212,17 @@ data Token
     | TokenDstPort
     | TokenSrcSubnet
     | TokenDstSubnet
-    | TokenDo     
+    | TokenDo
+    | TokenEOF     
     deriving Show
+
+data ParseResult a = Ok a | Failed String
+                     deriving Show    
+
+-- Estructura intermedia para realizar el parseo de un dispositivo
+data DeviceFieldsData = DeviceFieldsData
+    { macAddr :: T.Text
+    , ipAddr :: IPV4.IPv4
+    , subnetRange :: Maybe IPV4.IPv4Range
+    , ifaces :: [Interface]
+    }

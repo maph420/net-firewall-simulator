@@ -105,7 +105,7 @@ eval m pkt = let matched = eval' m in return matched
         eval' (MatchSrcPort sps) = any (== srcport pkt) sps
         eval' (MatchDstPort dps) = any (== dstport pkt) dps
         eval' (AndMatch m1 m2) = (eval' m1) && (eval' m2)
-        -- maybe these are not necessary
+        -- capaz no hacen falta estas
         eval' (OrMatch m1 m2) = (eval' m1) || (eval' m2)
         eval' (NotMatch m') = not (eval' m')
 
@@ -113,7 +113,7 @@ eval m pkt = let matched = eval' m in return matched
 
 buildEnv :: Info -> Either T.Text Env
 buildEnv info = do
-    -- 1. Find firewall device (by name)
+    -- encontrar el dispositivo de firewall, por nombre
     let firewallDevices = filter (\d -> devName d == "firewall") (infoNetwork info)
     
     firewall <- case firewallDevices of
@@ -121,7 +121,7 @@ buildEnv info = do
         [d] -> Right d
         _ -> Left "Error: Se encontraron multiples dispositivos 'firewall' en la config de red. Abortando."
     
-    -- 2. Build interface map
+    -- armar el mapa de interfaces
     let interfaceMap = M.fromList $ 
             map (\d -> (ipv4Dir d, interfaces d)) (infoNetwork info)
     

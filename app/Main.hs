@@ -1,18 +1,20 @@
--- a module serves the purpose of controlling namespaces and creating datatypes, functions, classes, use imports
--- Convention: module names capitalized, function names lowercased
 module Main (main) where
 
-import FirewallParser (parseFirewall, debugTokens)
+import FirewallParser (parseFirewall)
+import Common
 
 -- la ruta debe ser DESDE DONDE SE CORRE, no importa la ubicacion del main.
+testfile :: String
 testfile = "examples/multips.fws"
 
--- what you want ur program to do (entry point of the whole application)
+-- entry point
+-- capaz ver si se puede hacer un readFile safe.
 main :: IO ()
 main = do
     input <- readFile testfile
-    --putStrLn "TOKENS:" 
-    --debugTokens input
-    let info = parseFirewall input
-    putStrLn $ "Parsed successfully! " ++ (show info)
+    let res = parseFirewall input
+    case res of
+        Failed errstr -> putStrLn $ "Ocurrio un error durante el parseo: \n" ++ errstr
+        Ok info -> putStrLn $ "Parsed successfully!\n" ++ (show info)
+   
 
