@@ -27,9 +27,8 @@ library
   exposed-modules:
       Common
       Firewall
-      Lib
+      FirewallParser
       Monads
-      Parse
   other-modules:
       Paths_net_firewall_simulator
   hs-source-dirs:

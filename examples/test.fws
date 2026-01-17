@@ -1,0 +1,44 @@
+network {
+    device firewall {
+        mac = "00:11:22:33:44:55";
+        ip = "192.168.1.1";         
+        subnet = "192.168.1.0/24";   
+        interfaces = ["eth0", "eth1"];
+    }
+
+    device servidor-web {
+        mac = "AA:BB:CC:DD:EE:FF";
+        ip = "192.168.1.10";         
+        subnet = "192.168.1.0/24";   
+        interfaces = ["ppp0"];
+    }
+
+    device pc-lab {
+        mac = "DD:EE:FF:11:22:33";
+        ip = "192.168.9.1";          
+        subnet = "192.168.9.0/16";   
+        interfaces = ["ppp0", "wlan0", "wlan1"];
+    }
+}
+
+packets [
+    p1 : 192.168.1.10 -> 192.168.1.1 : tcp 22 via "ppp0",
+    p2 : 192.168.9.1 -> 192.168.1.10 : tcp 80 via "wlan1",
+    p3 : 192.168.1.1 -> 8.8.8.8 : udp 53 via "eth1",
+    p4 : 192.168.1.10 -> 192.168.9.1 : udp 67 via "ppp0",
+]
+
+rules {
+    chain INPUT {
+        -srcip 192.168.1.1 -do ACCEPT;
+        -dstip 10.0.0.1 -dstp 80 -do DROP;
+        -srcsubnet 192.168.1.0/24 -do REJECT;
+    }
+    chain FORWARD {
+        -prot tcp -dstp [80,443] -do ACCEPT;
+        -prot udp -dstp 53 -do ACCEPT;
+    }
+    chain OUTPUT {
+        -dstip 8.8.8.8 -do DROP;
+    }
+}

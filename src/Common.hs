@@ -28,7 +28,8 @@ module Common
         Info(..),
         Env(..),
         LogLevel(..),
-        LogEntry(..)
+        LogEntry(..),
+        Token(..)
     ) where
 
 import qualified Net.IPv4 as IPV4
@@ -65,7 +66,7 @@ data Device = Device {
     ipv4Dir     :: IPV4.IPv4,
     subnet      :: Maybe IPV4.IPv4Range, -- obligatoriamente pertenece a una subnet??
     interfaces  :: [Interface]
-}
+} deriving Show
 
 type Network = [Device]
 
@@ -89,7 +90,7 @@ data Packet = Packet {
     protocol    :: Protocol,
     ingressif   :: Interface,
     egressif    :: Interface
-}
+} deriving (Show)
 
 type SentPackets = [Packet]
 
@@ -124,7 +125,8 @@ data Match = MatchAny
     | MatchDstPort PortList
     | AndMatch Match Match -- encadenar todo lo que pide 1 regla
     | OrMatch Match Match -- para multipuertos: e.g. que matchee puerto src == 80 o == 443
-    | NotMatch Match -- capaz no hace falta (chequear)
+    | NotMatch Match -- capaz no hace falta (chequear) 
+    deriving (Show)
 
 
 --UNA regla: target (input,output,forward), match (conds a cumplir),action(rechazar,soltar,aceptar), log (opcional?)
@@ -133,7 +135,7 @@ data Rule = Rule {
     ruleMatch   :: Match,
     ruleAction  :: Action,
     ruleLog     :: Maybe T.Text
-} 
+} deriving (Show)
 
 -- TODO: chequear. a priori con una lista enlazada parece lo más eficiente.
 -- pinta que va a haber que agregar con (:) una por una las reglas a medida que se parsean, y por ultimo revertir la lista.
@@ -147,7 +149,7 @@ data Info = Info {
     infoNetwork :: Network,
     infoPackets :: SentPackets,
     infoRules :: RulesChains
-}
+} deriving (Show)
 
 -- Informacion que lleva el entorno, "procesar" la info
 data Env = Env {
@@ -164,4 +166,47 @@ data LogEntry = LogEntry {
     logLevel :: LogLevel,
     logMessage :: T.Text,
     logPacket :: Maybe Packet
-}
+} deriving (Show)
+
+data Token
+    = TokenDevice String
+    | TokenDeviceDescription
+    | TokenDeviceMac 
+    | TokenDeviceIP
+    | TokenDeviceSubnet
+    | TokenDeviceInterfaces
+    | TokenOpenBracket
+    | TokenCloseBracket
+    | TokenAssign
+    | TokenSemicolon
+    | TokenPackets
+    | TokenArrow
+    | TokenColon
+    | TokenTCP
+    | TokenUDP
+    | TokenANY
+    | TokenComma
+    | TokenOpenSquareBracket
+    | TokenCloseSquareBracket
+    | TokenRules
+    | TokenChain
+    | TokenInput
+    | TokenOutput
+    | TokenForward
+    | TokenVia
+    | TokenString String
+    | TokenIdent String
+    | TokenNumber Int
+    | TokenIP String
+    | TokenAccept
+    | TokenDrop
+    | TokenReject
+    | TokenDash
+    | TokenAnd
+    | TokenOr
+    | TokenNot
+    | TokenLParen
+    | TokenRParen
+    | TokenSlash
+    | TokenNetwork     
+    deriving Show

@@ -2,8 +2,14 @@
 -- Convention: module names capitalized, function names lowercased
 module Main (main) where
 
-import Lib
+import FirewallParser (parseFirewall)
+
+-- la ruta debe ser DESDE DONDE SE CORRE, no importa la ubicacion del main.
+testfile = "examples/test.fws"
 
 -- what you want ur program to do (entry point of the whole application)
 main :: IO ()
-main = someFunc
+main = do
+    input <- readFile testfile
+    let info = parseFirewall input
+    putStrLn $ "Parsed successfully!" ++ (show info)
