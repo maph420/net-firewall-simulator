@@ -1,5 +1,5 @@
 {
-module FirewallParser (parseFirewall) where
+module FirewallParser (parseFirewall, debugTokens) where
 
 import Common
 import qualified Data.Text as T
@@ -50,16 +50,16 @@ import Data.Word (Word8)
     '-'             { TokenDash }
     '/'             { TokenSlash }
     network         { TokenNetwork }
-    srcip           { TokenIdent "srcip" }
-    dstip           { TokenIdent "dstip" }
-    prot            { TokenIdent "prot" }
-    inif            { TokenIdent "inif" }
-    outif           { TokenIdent "outif" }
-    srcp            { TokenIdent "srcp" }
-    dstp            { TokenIdent "dstp" }
-    srcsubnet       { TokenIdent "srcsubnet" }
-    dstsubnet       { TokenIdent "dstsubnet" }
-    do              { TokenIdent "do" }
+    srcip           { TokenSrcIP }
+    dstip           { TokenDstIP }
+    prot            { TokenProt }
+    inif            { TokenInIf }
+    outif           { TokenOutIf }
+    srcp            { TokenSrcPort }
+    dstp            { TokenDstPort }
+    srcsubnet       { TokenSrcSubnet }
+    dstsubnet       { TokenDstSubnet }
+    do              { TokenDo }
     ACCEPT          { TokenAccept }
     DROP            { TokenDrop }
     REJECT          { TokenReject }
@@ -72,7 +72,7 @@ import Data.Word (Word8)
 
 Script : Network Packets Rules { Info $1 $2 $3 }
 
-Network : network '{' DeviceList '}' { reverse $3 }
+Network : network '{' DeviceList '}' { $3 }
 
 DeviceList : {- empty -} { [] } 
     | Device DeviceList { $1 : $2 }
@@ -80,11 +80,15 @@ DeviceList : {- empty -} { [] }
 Device : device IDENT '{' DeviceFields '}' 
     { Device (T.pack $2) Nothing (macAddr $4) (ipAddr $4) (subnetRange $4) (ifaces $4) }
 
-DeviceFields : mac '=' STRING ';' ip '=' STRING ';' subnet '=' STRING ';' interfaces '=' '[' IfList ']' ';'
+SubnetVal : STRING { Just (parseSubnet $1) }
+          | IP_ADDR '/' NUMBER { Just (readSubnet $1 $3) }
+          ;
+
+DeviceFields : mac '=' STRING ';' ip '=' IP_ADDR ';' subnet '=' SubnetVal ';' interfaces '=' '[' IfList ']' ';'
     { DeviceFieldsData
         { macAddr = T.pack $3
         , ipAddr = readIP $7
-        , subnetRange = Just (parseSubnet $11)
+        , subnetRange = $11
         , ifaces = map T.pack $16
         } }
 
@@ -92,7 +96,7 @@ IfList : {- empty -} { [] }
     | STRING { [$1] }
     | STRING ',' IfList { $1 : $3 }
 
-Packets : packets '[' PacketList ']' { reverse $3 }
+Packets : packets '[' PacketList ']' { $3 }
 
 PacketList : {- empty -} { [] }
     | Packet { [$1] }
@@ -188,25 +192,27 @@ lexer = lexer' 1
         | c == ';' = TokenSemicolon : lexer' lineNo cs
         | c == ':' = TokenColon : lexer' lineNo cs
         | c == ',' = TokenComma : lexer' lineNo cs
-        | isDigit c = lexIPOrNumber s  
+        | isDigit c = lexIPOrNumber lineNo s  
         | c == '"' = lexString lineNo cs
-        | isAlpha c = lexKeywordOrIdent s
+        | isAlpha c = lexKeywordOrIdent lineNo s
         | otherwise = error $ "Unexpected character '" ++ [c] ++ "' at line " ++ show lineNo
 
-    lexIPOrNumber :: String -> [Token]
-    lexIPOrNumber s = 
+    -- Number detected: check whether it's an IP address or a number and get its respective token
+    lexIPOrNumber :: Int -> String -> [Token]
+    lexIPOrNumber lineNo s = 
         -- Read a token that could be an IP address (digits and dots) or just a number
         let (token, rest) = span (\c -> isDigit c || c == '.') s
         in if any (== '.') token
             then if isValidIP token
-                then TokenIP token : lexer' 1 rest
+                then TokenIP token : lexer' lineNo rest
                 else error $ "Invalid IP address format: " ++ token
-            else TokenNumber (read token) : lexer' 1 rest
+            else TokenNumber (read token) : lexer' lineNo rest
 
-    lexNumber :: String -> [Token]
-    lexNumber s = 
+    -- unused for now
+    lexNumber :: Int -> String -> [Token]
+    lexNumber lineNo s = 
         let (num, rest) = span isDigit s
-        in TokenNumber (read num) : lexer' 1 rest
+        in TokenNumber (read num) : lexer' lineNo rest
 
     lexString :: Int -> String -> [Token]
     lexString lineNo s =
@@ -218,8 +224,8 @@ lexer = lexer' 1
                 else TokenString str : lexer' lineNo rest
             _ -> error $ "Unterminated string at line " ++ show lineNo
 
-    lexKeywordOrIdent :: String -> [Token]
-    lexKeywordOrIdent s =
+    lexKeywordOrIdent :: Int -> String -> [Token]
+    lexKeywordOrIdent lineNo s =
         let (ident, rest) = span (\c -> isAlphaNum c || c == '.' || c == '-') s
             token = case ident of
                 "device" -> TokenDevice ident
@@ -242,18 +248,18 @@ lexer = lexer' 1
                 "DROP" -> TokenDrop
                 "REJECT" -> TokenReject
                 "network" -> TokenNetwork
-                "srcip" -> TokenIdent "srcip"
-                "dstip" -> TokenIdent "dstip"
-                "prot" -> TokenIdent "prot"
-                "inif" -> TokenIdent "inif"
-                "outif" -> TokenIdent "outif"
-                "srcp" -> TokenIdent "srcp"
-                "dstp" -> TokenIdent "dstp"
-                "srcsubnet" -> TokenIdent "srcsubnet"
-                "dstsubnet" -> TokenIdent "dstsubnet"
-                "do" -> TokenIdent "do"
+                "srcip" -> TokenSrcIP
+                "dstip" -> TokenDstIP
+                "prot" -> TokenProt
+                "inif" -> TokenInIf
+                "outif" -> TokenOutIf
+                "srcp" -> TokenSrcPort
+                "dstp" -> TokenDstPort
+                "srcsubnet" -> TokenSrcSubnet
+                "dstsubnet" -> TokenDstSubnet
+                "do" -> TokenDo
                 _ -> if isValidIP ident then TokenIP ident else TokenIdent ident
-        in token : lexer' 1 rest
+        in token : lexer' lineNo rest
 
     -- Helper function to check if a string is a valid IP address
     isValidIP :: String -> Bool
@@ -271,15 +277,10 @@ readIP ipStr = case IPV4.decodeString ipStr of
     Just ip -> ip
     Nothing -> error $ "Invalid IP address: " ++ ipStr
 
--- Convert Int to Word8 for subnet prefix
-intToWord8 :: Int -> Word8
-intToWord8 n
-    | n >= 0 && n <= 255 = fromIntegral n
-    | otherwise = error $ "Invalid subnet prefix: " ++ show n ++ " (must be 0-255)"
 
 readSubnet :: String -> Int -> IPV4.IPv4Range
 readSubnet ipStr prefix = case IPV4.decodeString ipStr of
-    Just ip -> IPV4.range ip (intToWord8 prefix)
+    Just ip -> IPV4.range ip (fromIntegral prefix)
     Nothing -> error $ "Invalid IP address in subnet: " ++ ipStr
 
 -- Helper function to parse a subnet string in the form "192.168.1.0/24"
@@ -293,4 +294,13 @@ parseSubnet s =
 -- Main parsing function - parseScript returns Info directly, not Either
 parseFirewall :: String -> Info
 parseFirewall input = parseScript (lexer input)
+
+
+-- testing function
+debugTokens :: String -> IO ()
+debugTokens input = mapM_ print (lexer input)
 }
+
+-- happy src/FirewallParser.y -o src/FirewallParser.hs --ghc
+-- stack build
+-- stack run

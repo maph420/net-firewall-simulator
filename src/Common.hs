@@ -208,5 +208,15 @@ data Token
     | TokenLParen
     | TokenRParen
     | TokenSlash
-    | TokenNetwork     
+    | TokenNetwork
+    | TokenSrcIP
+    | TokenDstIP
+    | TokenProt
+    | TokenInIf
+    | TokenOutIf
+    | TokenSrcPort
+    | TokenDstPort
+    | TokenSrcSubnet
+    | TokenDstSubnet
+    | TokenDo     
     deriving Show

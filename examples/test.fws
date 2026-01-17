@@ -1,22 +1,22 @@
 network {
     device firewall {
         mac = "00:11:22:33:44:55";
-        ip = "192.168.1.1";         
-        subnet = "192.168.1.0/24";   
+        ip = 192.168.1.1;         
+        subnet = 192.168.1.0/24;   
         interfaces = ["eth0", "eth1"];
     }
 
     device servidor-web {
         mac = "AA:BB:CC:DD:EE:FF";
-        ip = "192.168.1.10";         
-        subnet = "192.168.1.0/24";   
+        ip = 192.168.1.10;         
+        subnet = 192.168.1.0/24;   
         interfaces = ["ppp0"];
     }
 
     device pc-lab {
         mac = "DD:EE:FF:11:22:33";
-        ip = "192.168.9.1";          
-        subnet = "192.168.9.0/16";   
+        ip = 192.168.9.1;          
+        subnet = 192.168.9.0/16;   
         interfaces = ["ppp0", "wlan0", "wlan1"];
     }
 }
