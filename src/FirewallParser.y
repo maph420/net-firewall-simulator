@@ -9,6 +9,7 @@ import Data.Char (isSpace, isAlpha, isAlphaNum, isDigit)
 import Data.Word (Word8)
 }
 
+
 %name parseScript
 %tokentype { Token }
 
@@ -84,12 +85,12 @@ SubnetVal : STRING { Just (parseSubnet $1) }
           | IP_ADDR '/' NUMBER { Just (readSubnet $1 $3) }
           ;
 
-DeviceFields : mac '=' STRING ';' ip '=' IP_ADDR ';' subnet '=' SubnetVal ';' interfaces '=' '[' IfList ']' ';'
+DeviceFields : mac '=' STRING ';' ip '=' IP_ADDR ';' subnet '=' SubnetVal ';' interfaces '=' IfList ';'
     { DeviceFieldsData
         { macAddr = T.pack $3
         , ipAddr = readIP $7
         , subnetRange = $11
-        , ifaces = map T.pack $16
+        , ifaces = map T.pack $15
         } }
 
 IfList : {- empty -} { [] }
@@ -140,19 +141,25 @@ SpecList : Spec { $1 }
     | SpecList '|' Spec { OrMatch $1 $3 }
     | '!' Spec { NotMatch $2 }
 
-Spec : '-' srcip IP_ADDR { MatchSrcIP (readIP $3) }
-    | '-' dstip IP_ADDR { MatchDstIP (readIP $3) }
+Spec : '-' srcip IPList { conjunctIPMatches $3 MatchSrcIP }
+    | '-' dstip IPList { conjunctIPMatches $3 MatchDstIP }
     | '-' prot Protocol { MatchProt $3 }
     | '-' inif STRING { MatchInIf (T.pack $3) }
     | '-' outif STRING { MatchOutIf (T.pack $3) }
     | '-' srcp PortSpec { MatchSrcPort $3 }
     | '-' dstp PortSpec { MatchDstPort $3 }
-    | '-' srcsubnet IP_ADDR '/' NUMBER { MatchSrcSubnet (readSubnet $3 $5) }
-    | '-' dstsubnet IP_ADDR '/' NUMBER { MatchDstSubnet (readSubnet $3 $5) }
+    | '-' srcsubnet SubnetList { conjunctIPRangeMatches $3 MatchSrcSubnet }
+    | '-' dstsubnet SubnetList { conjunctIPRangeMatches $3 MatchDstSubnet }
     | '(' SpecList ')' { $2 }
 
+IPList : IP_ADDR { [$1] }
+    | IP_ADDR ',' IPList { $1 : $3 }
+
+SubnetList : IP_ADDR '/' NUMBER { [($1, $3)] }
+    | IP_ADDR '/' NUMBER ',' SubnetList { ($1, $3) : $5 }
+
 PortSpec : NUMBER { [$1] }
-    | '[' PortList ']' { $2 }
+    |  PortList { $1 }
 
 PortList : NUMBER { [$1] }
     | NUMBER ',' PortList { $1 : $3 }
@@ -161,6 +168,7 @@ PortList : NUMBER { [$1] }
 -- Error handling function that Happy expects
 happyError :: [Token] -> a
 happyError tokens = error $ "Parse error near tokens: " ++ show (take 5 tokens)
+
 
 data DeviceFieldsData = DeviceFieldsData
     { macAddr :: T.Text
@@ -290,6 +298,17 @@ parseSubnet s =
         prefixStr = drop 1 rest
         prefix = read prefixStr :: Int
     in readSubnet ipStr prefix
+
+-- precond: grammar guarantees list has at least 1 element.
+conjunctIPMatches :: [ String ] -> (IPV4.IPv4 -> Match) -> Match
+conjunctIPMatches [ipStr] construct = construct (readIP ipStr)
+conjunctIPMatches (ipStr : ipStrs) construct = AndMatch (construct (readIP ipStr)) (conjunctIPMatches ipStrs construct)
+
+conjunctIPRangeMatches :: [(String, Int)] -> (IPV4.IPv4Range -> Match) -> Match
+conjunctIPRangeMatches [(ipRangeStr, n)] c = c (readSubnet ipRangeStr n)
+conjunctIPRangeMatches ((ipRangeStr, n) : ipRangeStrs) c = AndMatch (c (readSubnet ipRangeStr n)) (conjunctIPRangeMatches ipRangeStrs c)
+
+
 
 -- Main parsing function - parseScript returns Info directly, not Either
 parseFirewall :: String -> Info

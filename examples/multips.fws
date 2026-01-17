@@ -30,15 +30,15 @@ packets [
 
 rules {
     chain INPUT {
-        -srcip 192.168.1.1 -do ACCEPT;
-        -dstip 10.0.0.1 -dstp 80 -do DROP;
-        -srcsubnet 192.168.1.0/24 -do REJECT;
+        -srcip 192.168.1.1, 10.0.1.2 -do ACCEPT;
+        -dstip 10.0.0.1, 10.0.1.2 -dstp 80 -do DROP;
+        -srcsubnet 192.168.1.0/24, 10.0.0.1/16 -do REJECT;
     }
     chain FORWARD {
         -prot tcp -dstp 80,443 -do ACCEPT;
         -prot udp -dstp 53 -do ACCEPT;
     }
     chain OUTPUT {
-        -dstip 8.8.8.8 -do DROP;
+        -dstip 8.8.8.8, 1.1.1.1 -do DROP;
     }
-}
+} 

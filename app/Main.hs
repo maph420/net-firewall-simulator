@@ -5,7 +5,7 @@ module Main (main) where
 import FirewallParser (parseFirewall, debugTokens)
 
 -- la ruta debe ser DESDE DONDE SE CORRE, no importa la ubicacion del main.
-testfile = "examples/test.fws"
+testfile = "examples/multips.fws"
 
 -- what you want ur program to do (entry point of the whole application)
 main :: IO ()
@@ -15,3 +15,4 @@ main = do
     --debugTokens input
     let info = parseFirewall input
     putStrLn $ "Parsed successfully! " ++ (show info)
+
