@@ -16,7 +16,10 @@
 -- lo que nos llega a nosotros desp del parseo, 
 
 module Firewall
-    ( runFirewallSimulation
+    ( 
+        runFirewallSimulation,
+        buildEnv,
+        formatLogs
     ) where
 
 import Common
@@ -71,8 +74,6 @@ processPacket p = do
             evalChain chain p
             
 
-
--- TODO: implementar logica del firewall para filtrar 1 paquete
 -- conj de reglas vacias -> no corto antes -> no matchea ninguna regla (esto es si ni siquiera se especifico drop policy para la chain)
 evalChain :: [Rule] -> Packet -> RWMonad Action
 evalChain [ ] _ = return Drop
@@ -80,12 +81,12 @@ evalChain (r:rs) pkt = do
                     success <- eval (ruleMatch r) pkt
                     if success 
                         then do
-                            logMsg Information ("Paquete " `T.append` packid pkt `T.append` " coincidió con regla " `T.append` (ruleId r) `T.append` 
-                                            ", acción: " `T.append` T.pack (show (ruleAction r))) (Just pkt)
+                            logMsg Information ("Paquete " `T.append` packid pkt `T.append` " coincidió con regla " `T.append` (T.pack $ show $ ruleMatch r) `T.append` " (id: " `T.append` (ruleId r) `T.append`
+                                            "), acción: " `T.append` T.pack (show (ruleAction r))) (Just pkt)
                             return (ruleAction r) 
                         else do
                             logMsg Information ("Paquete "  `T.append` packid pkt  `T.append` 
-                                            " no coincidió con regla "  `T.append` (ruleId r)) (Just pkt)
+                                            " no coincidió con regla "  `T.append` (T.pack $ show $ ruleMatch r) `T.append` " (id " `T.append` (ruleId r) `T.append` ")") (Just pkt)
                             evalChain rs pkt
 
 
@@ -110,7 +111,7 @@ eval m pkt = let matched = eval' m in return matched
         eval' (NotMatch m') = not (eval' m')
 
 
-
+-- funca a priori
 buildEnv :: Info -> Either T.Text Env
 buildEnv info = do
     -- encontrar el dispositivo de firewall, por nombre
@@ -145,13 +146,14 @@ runFirewallSimulation info =
         Right env -> runSimulation env (infoPackets info)
 
 runSimulation :: Env -> [Packet] -> ([(Packet, Action)], [LogEntry])
+-- le pasa a la monada: la estructura resultado ([Packet,Action]) y el ambiente estatico a utilizar
 runSimulation env packets = 
     runWriter $ runReaderT (processAll packets) env
   where
     processAll :: [Packet] -> RWMonad [(Packet, Action)]
-    processAll pkt = mapM (\p -> do
+    processAll pkts = mapM (\p -> do
                             act <- processPacket p
-                            return (p, act)) pkt
+                            return (p, act)) pkts
 
 
 -- pasar de logs a texto.

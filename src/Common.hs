@@ -150,7 +150,7 @@ data Env = Env {
     deviceInterfaces :: M.Map IPV4.IPv4 [Interface],
     firewallIP :: IPV4.IPv4,
     rulesChains :: RulesChains
-}
+} deriving Show
 
 -- Informacion de loggeo
 
