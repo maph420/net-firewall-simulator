@@ -29,6 +29,7 @@ library
       Firewall
       FirewallParser
       Monads
+      PrettyPrinter
   other-modules:
       Paths_net_firewall_simulator
   hs-source-dirs:

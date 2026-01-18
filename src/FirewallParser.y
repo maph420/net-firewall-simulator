@@ -64,6 +64,7 @@ import Monads
     srcsubnet       { TokenSrcSubnet }
     dstsubnet       { TokenDstSubnet }
     do              { TokenDo }
+    default         { TokenDefault }
     ACCEPT          { TokenAccept }
     DROP            { TokenDrop }
     REJECT          { TokenReject }
@@ -78,7 +79,7 @@ Script : Network Packets Rules { Info $1 $2 $3 }
 
 Network : network '{' DeviceList '}' { $3 }
 
-DeviceList : {- empty -} { [] } 
+DeviceList : Device { [ $1] } 
     | Device DeviceList { $1 : $2 }
 
 Device : device IDENT '{' DeviceFields '}' 
@@ -96,17 +97,17 @@ DeviceFields : mac '=' STRING ';' ip '=' IP_ADDR ';' subnet '=' SubnetVal ';' in
         , ifaces = map T.pack $15
         } }
 
-IfList : {- empty -} { [] }
-    | STRING { [$1] }
+IfList : STRING { [$1] }
     | STRING ',' IfList { $1 : $3 }
 
 Packets : packets '[' PacketList ']' { $3 }
+-- VER: hice la gramatica tq no se admiten dispositivos sin interfaces
+-- o un script con 0 envios de paquetes
 
-PacketList : {- empty -} { [] }
-    | Packet { [$1] }
-    | Packet ',' PacketList { $1 : $3 }
+PacketList : Packet { [$1] }
+    | Packet PacketList { $1 : $2 }
 
-Packet : IDENT ':' IP_ADDR '->' IP_ADDR ':' Protocol NUMBER via STRING 
+Packet : IDENT ':' IP_ADDR '->' IP_ADDR ':' Protocol NUMBER via STRING ';'
     { Packet (T.pack $1) (readIP $3) (readIP $5) 0 $8 $7 (T.pack $10) (T.pack $10) }
 
 Protocol : tcp { TCP }
@@ -118,9 +119,11 @@ Rules : rules '{' ChainDecls '}' { M.fromList $3 }
 ChainDecls : {- empty -} { [] }
     | ChainDecl ChainDecls { $1 : $2 }
 
+-- ?
 ChainDecl : ChainBlock { $1 }
 
 ChainBlock : chain CHAIN_NAME '{' RuleList '}' { ($2, reverse $4) }
+
 
 CHAIN_NAME : INPUT  { Input }
     | OUTPUT { Output }
@@ -132,6 +135,7 @@ RuleList : {- empty -} { [] }
 RulesSemiList : Rule ';' { [$1] }
     | Rule ';' RulesSemiList { $1 : $3 }
 
+-- cambiar string "rule"
 Rule : SpecList '-' do ACTION { Rule (T.pack "rule") $1 $4 Nothing }
 
 ACTION : ACCEPT { Accept }
@@ -147,8 +151,8 @@ SpecList : Spec { $1 }
 Spec : '-' srcip IPList { conjunctIPMatches $3 MatchSrcIP }
     | '-' dstip IPList { conjunctIPMatches $3 MatchDstIP }
     | '-' prot Protocol { MatchProt $3 }
-    | '-' inif STRING { MatchInIf (T.pack $3) }
-    | '-' outif STRING { MatchOutIf (T.pack $3) }
+    | '-' inif IfList { conjunctIfMatches $3 MatchInIf }
+    | '-' outif IfList { conjunctIfMatches $3 MatchOutIf}
     | '-' srcp PortSpec { MatchSrcPort $3 }
     | '-' dstp PortSpec { MatchDstPort $3 }
     | '-' srcsubnet SubnetList { conjunctIPRangeMatches $3 MatchSrcSubnet }
@@ -160,6 +164,7 @@ IPList : IP_ADDR { [$1] }
 
 SubnetList : IP_ADDR '/' NUMBER { [($1, $3)] }
     | IP_ADDR '/' NUMBER ',' SubnetList { ($1, $3) : $5 }
+
 
 PortSpec : NUMBER { [$1] }
     |  PortList { $1 }
@@ -255,6 +260,7 @@ lexKeywordOrIdent cont tokenRaw = \_ line ->
             "srcsubnet"  -> TokenSrcSubnet
             "dstsubnet"  -> TokenDstSubnet
             "do"         -> TokenDo
+            "default"    -> TokenDefault
             _            -> if isValidIP ident then TokenIP ident else TokenIdent ident
     in cont token rest line
 
@@ -297,7 +303,9 @@ conjunctIPRangeMatches :: [(String, Int)] -> (IPV4.IPv4Range -> Match) -> Match
 conjunctIPRangeMatches [(ipRangeStr, n)] c = c (readSubnet ipRangeStr n)
 conjunctIPRangeMatches ((ipRangeStr, n) : ipRangeStrs) c = AndMatch (c (readSubnet ipRangeStr n)) (conjunctIPRangeMatches ipRangeStrs c)
 
-
+conjunctIfMatches :: [String] -> (T.Text -> Match) -> Match
+conjunctIfMatches [ifStr] c = c (T.pack ifStr)
+conjunctIfMatches (ifstr : ifstrs) c = AndMatch (c $ T.pack ifstr) (conjunctIfMatches ifstrs c)
 
 -- Manejador de errores de parseo usado por Happy
 happyError :: P a
