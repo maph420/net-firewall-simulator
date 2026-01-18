@@ -16,6 +16,8 @@ import Monads
 %lexer {lexer} {TokenEOF}
 
 
+-- TODO: AGREGAR SOPORTE PARA VARIABLES
+
 %token
     device          { TokenDevice $$ }
     desc            { TokenDeviceDescription }
