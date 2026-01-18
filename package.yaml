@@ -26,6 +26,7 @@ dependencies:
 - text
 - mtl # chequear
 - containers # chequear
+- prettyprinter
 
 ghc-options:
 - -Wall

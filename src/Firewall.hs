@@ -29,6 +29,7 @@ import Control.Monad.Reader (ask, runReaderT)
 import qualified Net.IPv4 as IPV4
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
+import PrettyPrinter (renderMatch)
 
 -- Verificamos que el paquete provenga de una IP conocida y de una interfaz de red existente del origen.
 -- Previene un posible ataque de spoofing
@@ -81,12 +82,12 @@ evalChain (r:rs) pkt = do
                     success <- eval (ruleMatch r) pkt
                     if success 
                         then do
-                            logMsg Information ("Paquete " `T.append` packid pkt `T.append` " coincidió con regla " `T.append` (T.pack $ show $ ruleMatch r) `T.append` " (id: " `T.append` (ruleId r) `T.append`
+                            logMsg Information ("Paquete " `T.append` packid pkt `T.append` " coincidió con regla " `T.append` (renderMatch $ ruleMatch r) `T.append` " (id: " `T.append` (ruleId r) `T.append`
                                             "), acción: " `T.append` T.pack (show (ruleAction r))) (Just pkt)
                             return (ruleAction r) 
                         else do
                             logMsg Information ("Paquete "  `T.append` packid pkt  `T.append` 
-                                            " no coincidió con regla "  `T.append` (T.pack $ show $ ruleMatch r) `T.append` " (id " `T.append` (ruleId r) `T.append` ")") (Just pkt)
+                                            " no coincidió con regla "  `T.append` (renderMatch $ ruleMatch r) `T.append` " (id " `T.append` (ruleId r) `T.append` ")") (Just pkt)
                             evalChain rs pkt
 
 
