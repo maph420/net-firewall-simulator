@@ -122,18 +122,21 @@ ChainDecls : {- empty -} { [] }
 -- ?
 ChainDecl : ChainBlock { $1 }
 
-ChainBlock : chain CHAIN_NAME '{' RuleList '}' { ($2, reverse $4) }
+ChainBlock : chain CHAIN_NAME '{' Stmts '}' { ($2, $4) }
 
+ChainBody : Stmts { $1 }
+
+Stmts : {- empty -} { [] }
+    | Stmt Stmts { $1 : $2 }
+
+Stmt : Rule ';' { $1 }
+    | DefaultPolicy { $1 }
+
+DefaultPolicy : '-' default ACTION ';' { Rule (T.pack "default") MatchAny $3 Nothing }
 
 CHAIN_NAME : INPUT  { Input }
     | OUTPUT { Output }
     | FORWARD { Forward }
-
-RuleList : {- empty -} { [] }
-    | RulesSemiList { reverse $1 }
-
-RulesSemiList : Rule ';' { [$1] }
-    | Rule ';' RulesSemiList { $1 : $3 }
 
 -- cambiar string "rule"
 Rule : SpecList '-' do ACTION { Rule (T.pack "rule") $1 $4 Nothing }
@@ -174,7 +177,7 @@ PortList : NUMBER { [$1] }
 
 {
 
--- obtener numero de linea del estado de la mónada      
+-- obtener numero de linea del estado de la monada      
 getLineNo :: P Int
 getLineNo = \s l -> Ok l
 

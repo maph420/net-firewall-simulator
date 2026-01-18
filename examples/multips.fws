@@ -33,13 +33,16 @@ rules {
         -srcip 192.168.1.1, 10.0.1.2 -do ACCEPT;
         -dstip 10.0.0.1, 10.0.1.2 -dstp 80 -do DROP;
         -srcsubnet 192.168.1.0/24, 10.0.0.1/16 -do REJECT;
+        -default DROP;
     }
     chain FORWARD {
         -prot udp -dstp 53 -outif "eth0" -do ACCEPT ;
         -prot tcp -dstp 80,443,53,22 -inif "eth1","wlan1" -do ACCEPT ;
+        -default REJECT;
     }
     chain OUTPUT {
         -dstip 8.8.8.8, 1.1.1.1 -do DROP;
+        -default ACCEPT;
     }
 
 } 

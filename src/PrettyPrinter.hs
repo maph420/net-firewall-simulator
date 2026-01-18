@@ -12,15 +12,15 @@ import Prettyprinter.Render.Text (renderStrict)
 import Data.Text as T
 
 printMatch :: Match -> Doc ()
-printMatch (MatchSrcIP sip) = "source_ip =" <+> (PP.pretty . IPV4.encode) sip 
-printMatch (MatchDstIP dip) = "destination_ip =" <+> (PP.pretty . IPV4.encode) dip
-printMatch (MatchSrcSubnet mss) = "source_subnet_range =" <+> (PP.pretty . IPV4.encodeRange) mss 
-printMatch (MatchDstSubnet mds) = "destination_subnet_range =" <+> (PP.pretty . IPV4.encodeRange) mds
+printMatch (MatchSrcIP sip) = "source-ip =" <+> (PP.pretty . IPV4.encode) sip 
+printMatch (MatchDstIP dip) = "destination-ip =" <+> (PP.pretty . IPV4.encode) dip
+printMatch (MatchSrcSubnet mss) = "source-subnet-range =" <+> (PP.pretty . IPV4.encodeRange) mss 
+printMatch (MatchDstSubnet mds) = "destination-subnet-range =" <+> (PP.pretty . IPV4.encodeRange) mds
 printMatch (MatchProt prot) = "protocol =" <+> (PP.pretty . Prelude.show) prot 
-printMatch (MatchInIf inif) = "in_interface =" <+> (pretty inif)
-printMatch (MatchOutIf outif) = "out_interface =" <+> (pretty outif)
-printMatch (MatchSrcPort msp) = "source_port =" <+> (prettyList (msp :: PortList))
-printMatch (MatchDstPort mdp) = "destination_port =" <+> (prettyList (mdp :: PortList))
+printMatch (MatchInIf inif) = "in-interface =" <+> (pretty inif)
+printMatch (MatchOutIf outif) = "out-interface =" <+> (pretty outif)
+printMatch (MatchSrcPort msp) = "source-port =" <+> (prettyList (msp :: PortList))
+printMatch (MatchDstPort mdp) = "destination-port =" <+> (prettyList (mdp :: PortList))
 printMatch (AndMatch m1 m2) = (printMatch m1) <> "," <+> (printMatch m2)
 -- capaz no hacen falta
 printMatch (OrMatch m1 m2) = (printMatch m1) <+> "OR" <+> (printMatch m2)
