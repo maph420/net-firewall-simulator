@@ -102,7 +102,7 @@ DeviceFields : mac '=' STRING ';' ip '=' IP_ADDR ';' subnet '=' SubnetVal ';' in
 IfList : STRING { [$1] }
     | STRING ',' IfList { $1 : $3 }
 
-Packets : packets '[' PacketList ']' { $3 }
+Packets : packets '{' PacketList '}' { $3 }
 -- VER: hice la gramatica tq no se admiten dispositivos sin interfaces
 -- o un script con 0 envios de paquetes
 
@@ -189,6 +189,7 @@ lexer cont s = \line ->
     case s of
         [] -> cont TokenEOF [] line
         ('\n':cs) -> lexer cont cs (line + 1)
+        ('/':('/':cs)) -> lexer cont (dropWhile ((/=) '\n') cs) line -- comentarios
         (c:cs) 
             | isSpace c -> lexer cont cs line
             | isDigit c -> lexIPOrNumber cont (c:cs) s line

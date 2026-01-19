@@ -34,23 +34,18 @@ import PrettyPrinter (renderMatch)
 -- Verificamos que el paquete provenga de una IP conocida y de una interfaz de red existente del origen.
 -- Previene un posible ataque de spoofing
 
--- Tambien aca (o en la misma fase) CHEQUEAR que se haya provisto un IP de firewall,
--- y que la misma sea valida (sin IP de firewall no se puede proseguir)
-
-securityCheck :: Packet -> RWMonad Bool
+-- ver esta funcion, por ahora solo agrega warnings al log si ve comportamiento sospechoso, no toma acciones sobre paquetes ni nada.
+securityCheck :: Packet -> RWMonad ()
 securityCheck p = do 
     env <- ask
     case M.lookup (srcip p) (deviceInterfaces env) of
-        Nothing -> do
-            logMsg Warning "paquete proveniente de IP desconocida en la red." (Just p)
-            return False
+        Nothing -> do logMsg Warning ("paquete proveniente de IP desconocida en la red. (" `T.append` (IPV4.encode $ srcip p) `T.append` ")") (Just p)
+            
         Just ifs -> do
-            if (elem (ingressif p) ifs)
-                then return True
-                else do
-                    logMsg Warning "paquete proveniente de una interfaz de red incorrecta." (Just p)
-                    return False
-
+            if not (elem (ingressif p) ifs)
+            then do logMsg Warning ("paquete proveniente de una interfaz de red incorrecta. (" `T.append` (ingressif p) `T.append` ")") (Just p)
+            else return ()
+                    
 -- decidir, segun el origen/destino del paquete, el objetivo del mismo (input/output/forward)
 getTargetChain :: Packet -> RWMonad [Rule]
 getTargetChain p = do
@@ -67,13 +62,9 @@ getTargetChain p = do
 
 processPacket :: Packet -> RWMonad Action
 processPacket p = do
-    valid <- securityCheck p
-    if (not valid)
-        then return Drop -- lo recomendado con paquetes sospechosos es descartarlos "silenciosamente", en lugar de reject y avisar a la fuente
-        else do 
-            chain <- getTargetChain p
-            evalChain chain p
-            
+    securityCheck p -- loggeea info extra
+    chain <- getTargetChain p
+    evalChain chain p
 
 -- conj de reglas vacias -> no corto antes -> no matchea ninguna regla (esto es si ni siquiera se especifico drop policy para la chain)
 evalChain :: [Rule] -> Packet -> RWMonad Action
@@ -82,14 +73,12 @@ evalChain (r:rs) pkt = do
                     success <- eval (ruleMatch r) pkt
                     if success 
                         then do
-                            logMsg Information ("Paquete " `T.append` packid pkt `T.append` " coincidió con regla " `T.append` (renderMatch $ ruleMatch r) `T.append` " (id: " `T.append` (ruleId r) `T.append`
+                            logMsg Information ("Regla matcheada: " `T.append` (renderMatch $ ruleMatch r) `T.append` " (id: " `T.append` (ruleId r) `T.append`
                                             "), acción: " `T.append` T.pack (show (ruleAction r))) (Just pkt)
                             return (ruleAction r) 
                         else do
-                            logMsg Information ("Paquete "  `T.append` packid pkt  `T.append` 
-                                            " no coincidió con regla "  `T.append` (renderMatch $ ruleMatch r) `T.append` " (id " `T.append` (ruleId r) `T.append` ")") (Just pkt)
+                            logMsg Information ("Regla NO matcheada: "  `T.append` (renderMatch $ ruleMatch r) `T.append` " (id " `T.append` (ruleId r) `T.append` ")") (Just pkt)
                             evalChain rs pkt
-
 
 -- evaluador puro???
 eval :: Match -> Packet -> RWMonad Bool
@@ -138,7 +127,6 @@ buildEnv info = do
 -- Una lista de tuplas (paquete_procesado, accion_tomada)
 -- o bien un texto de error, simbolizando un error de sanidad de input del script (e.g. no se especifico un dispositivo firewall)
 
-
 runFirewallSimulation :: Info -> ([(Packet, Action)], [LogEntry])
 runFirewallSimulation info = 
     case buildEnv info of
@@ -156,7 +144,6 @@ runSimulation env packets =
                             act <- processPacket p
                             return (p, act)) pkts
 
-
 -- pasar de logs a texto.
 formatLogs :: [LogEntry] -> T.Text
 formatLogs logs = T.unlines $ map formatLogEntry logs
@@ -169,5 +156,5 @@ formatLogs logs = T.unlines $ map formatLogEntry logs
                          Error -> "ERROR"
             pktInfo = case mpkt of
                         Nothing -> ""
-                        Just pkt' -> " [Paquete: " `T.append` packid pkt' `T.append` "]"
-        in levelStr `T.append` ": " `T.append` msg `T.append` pktInfo
+                        Just pkt' -> "{Paquete " `T.append` packid pkt' `T.append` "}: "
+        in "{" `T.append` levelStr `T.append` "} " `T.append` pktInfo `T.append` msg 

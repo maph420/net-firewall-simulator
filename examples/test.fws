@@ -13,6 +13,7 @@ network {
         interfaces = "ppp0";
     }
 
+// comentario oooo                       
     device pc-lab {
         mac = "DD:EE:FF:11:22:33";
         ip = 192.168.9.1;          
@@ -21,12 +22,14 @@ network {
     }
 }
 
-packets [
+packets {
     p1 : 192.168.1.10 -> 192.168.1.1 : tcp 22 via "ppp0";
     p2 : 192.168.9.1 -> 192.168.1.10 : tcp 80 via "wlan1";
     p3 : 192.168.1.1 -> 8.8.8.8 : udp 53 via "eth1";
+        p5 : 202.22.1.0 -> 192.168.9.1 : tcp 22 via "eth0";
+    paquete-sus: 192.168.1.10 -> 192.168.9.1 : udp 67 via "wlan4";
     p4 : 192.168.1.10 -> 192.168.9.1 : udp 67 via "ppp0";
-]
+}
 
 rules {
     chain INPUT {

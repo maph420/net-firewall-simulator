@@ -1,0 +1,97 @@
+// Ejemplo 1
+
+
+network {
+
+    // LAN
+
+    device pc0 {
+        mac = "AA:BB:CC:DD:EE";
+        ip = 10.0.1.23;
+        subnet = 10.0.1.0/24;
+        interfaces = "wlan1";
+    }
+
+    device pc1 {
+        mac = "AA:BB:CC:DD:EF";
+        ip = 10.0.1.25;
+        subnet = 10.0.1.0/24;
+        interfaces = "wlan1";
+    }
+
+     device pc2{
+        mac = "AA:BB:CC:DD:01";
+        ip = 10.0.1.27;
+        subnet = 10.0.1.0/24;
+        interfaces = "wlan1";
+    }
+
+    // Red de servidores
+
+    device db {
+        mac = "AA:BB:CC:CA:FE";
+        ip = 10.0.2.30;
+        subnet = 10.0.2.0/24;
+        interfaces = "eth0";
+    }
+
+    device backup {
+        mac = "AA:BB:CC:CA:FF";
+        ip = 10.0.2.31;
+        subnet = 10.0.2.0/24;
+        interfaces = "eth0";
+    }
+
+
+    // DMZ
+
+    device sv1 {
+        mac = "AA:BB:CC:CB:FF";
+        ip = 181.16.1.17;
+        subnet = 181.16.1.16/28;
+        interfaces = "eth1";
+    }
+
+    
+    device sv2 {
+        mac = "AA:BB:CC:CC:FF";
+        ip = 181.16.1.22;
+        subnet = 181.16.1.16/28;
+        interfaces = "eth1";
+    }
+
+    device sv3 {
+        mac = "AA:BB:CC:CD:FF";
+        ip = 181.16.1.24;
+        subnet = 181.16.1.16/28;
+        interfaces = "eth1";
+    }
+
+    // Firewall (clave para que ande el simulador)
+    device firewall {
+        mac = "AA:BB:CC:CE:FF";
+        ip = 200.3.1.2;
+        subnet = 200.3.1.2/24;
+        interfaces = "eth1";
+    }
+}
+
+packets {
+    // una ip desconocida quiere acceder al ssh de la DMZ -> permitir
+    p-ext1 : 211.0.0.12 -> 181.16.1.22 : tcp 22 via "eth1";
+
+    // una ip desconocida quiere acceder a ssh del server dns! no permitir.
+    p-ext2 : 211.0.0.14 -> 181.16.1.17 : tcp 22 via "eth1";
+
+}
+
+rules {
+    chain FORWARD {
+        -srcsubnet 10.0.1.0/24 -inif "wlan1" -outif "eth0" -dstsubnet 10.0.2.0/24 -do DROP;
+        -srcsubnet 10.0.1.0/24 -do ACCEPT;
+        -outif "eth1" -dstip 181.16.1.17 -prot tcp -dstp 80,44,53 -do ACCEPT;
+        -outif "eth1" -dstip 181.16.1.22 -prot tcp -dstp 22 -do ACCEPT;
+        -outif "eth1" -dstip 181.16.1.24 -prot tcp -dstp 103, 143 -do ACCEPT;
+        -default DROP;
+    }
+}
