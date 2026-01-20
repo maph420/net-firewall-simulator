@@ -188,7 +188,8 @@ data Token
     | TokenInput
     | TokenOutput
     | TokenForward
-    | TokenVia
+    | TokenFrom
+    | TokenTo
     | TokenString String
     | TokenIdent String
     | TokenNumber Int

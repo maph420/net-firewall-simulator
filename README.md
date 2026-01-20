@@ -41,7 +41,7 @@ device device-name-N {
 ```
 Cada dispositivo se describe con:
 
-**``mac:``** debe ir encerrada entre `""`, se trata de una cadena de caracteres identificatoria.
+**``mac:``** debe ir encerrada entre `""`, se trata de una cadena de caracteres identificatoria a una dirección **MAC** válida.
 
 **``ip:``** una dirección `IPv4` válida.
 
@@ -62,12 +62,12 @@ Define los envíos que se llevarán a cabo durante la simulación, es decir, ¿q
 ```
 
 packets {
-packet-1 : ???.???.???.??? -> ???.???.???.??? : ??? ?? via "???";
-packet-2 : ???.???.???.??? -> ???.???.???.??? : ??? ?? via "???";
+packet-1 : ???.???.???.??? -> ???.???.???.??? : ??? ?? -> ?? : from "???" to "???";
+packet-2 : ???.???.???.??? -> ???.???.???.??? : ??? ?? -> ?? : from "???" to "???";
 .
 .
 .
-packet-N: ???.???.???.??? -> ???.???.???.??? : ??? ?? via "???";
+packet-N : ???.???.???.??? -> ???.???.???.??? : ??? ?? -> ?? : from "???" to "???";
 }
 
 ```
@@ -76,9 +76,15 @@ Donde los campos corresponden a:
 - La ip de origen
 - La ip de destino
 - El protocolo a utilizar. Los protocolos pueden ser: tcp, udp o any (los dos anteriores)
-- El numero de puerto de destino del paquete. Un natural en el rango `[0, 65535]` ¿Qué servicio está solicitando? Suele estar estrechamente relacionado con el protocolo seleccionado.
-- El último campo indica, entre `""`, la interfaz por la cuál se enviará el paquete. (?)
+- El numero de puerto de origen del paquete. Un natural en el rango `[0, 65535]`. Sirve cuando un nodo pide multiples servicios a otro nodo.
+- El numero de puerto de destino del paquete. Un natural en el rango `[0, 65535]` Sirve para identificar el servicio que el remitente está solicitando. Suele estar relacionado con el protocolo seleccionado.
+- Entre `""`, la interfaz por la cual el paquete **llega** al firewall. Si el paquete sale del firewall, se puede ignorar el campo dejandolo vacío (`""`).
+- Entre `""`, la interfaz por la cual el paquete **sale** al firewall. Si el paquete es destinado al firewall, se puede ignorar el campo dejandolo vacío (`""`).
 
+> [!NOTE]
+> Por fines didácticos del firewall, si un paquete proviene del internet (fuera de la red que protege el firewall), 
+> se usará como **interfaz de entrada** la que vincula el firewall con el enrutador, que convenimos que es **eth3**. 
+> La que se suministre en la sintaxis del paquete se ignorará.
 
 ### Sección rules
 
@@ -120,9 +126,9 @@ Las condiciones que se pueden imponer para cada regla son:
 
 - `-dstp ??, ...`. Especifica el/los puertos a los cuales el emisor del paquete quiere acceder. Los valores son números naturales en el rango `[0, 65535]`.
 
-- `-inif "???", ..."`. Especifica la/las interfaces por las cuales sale el paquete desde su origen. Los valores son cadenas de caracteres (las interfaces deben ir encerradas entre `""`).
+- `-inif "???", ..."`. Especifica la/las interfaces por las cuales el paquete entrará al firewall. Sólo es compatible con las cadenas: `INPUT` y `FORWARD`. Los valores son cadenas de caracteres (las interfaces deben ir encerradas entre `""`).
 
-- `-outif "???", ..."`. Especifica la/las interfaces a las cuales llega el paquete a su destino(?). Los valores son cadenas de caracteres (las interfaces deben ir encerradas entre `""`).
+- `-outif "???", ..."`. Especifica la/las interfaces por las cuales el paquete sale, desde el nodo remitente. Sólo es compatible con las cadenas: `OUTPUT` y `FORWARD`. Los valores son cadenas de caracteres (las interfaces deben ir encerradas entre `""`).
 
 Adicionalmente, se agrega a la semántica la posibilidad de especificar una política por defecto (**default policy**). Esto es, ¿qué acción tomar si el paquete que pasa no coincide con ninguna de las reglas?
 
@@ -132,7 +138,7 @@ Al final de cada definición de una `chain`, opcionalmente se puede terminar con
 
 > [!NOTE]
 > Al igual que en **iptables**, el órden de definición de las reglas es importante.
-> Las mismas se evaluarán en el mismo orden en el que fueron definidas, según la chain a la que pertenezcan (`INPUT`, `OUTPUT` o `FORWARD`).
+> Se evaluarán en el mismo orden en el que fueron definidas, según la chain a la que pertenezcan (`INPUT`, `OUTPUT` o `FORWARD`).
 
 ### Comentarios
 
@@ -175,10 +181,10 @@ network {
 }
 
 packets {
-    p1 : 192.168.1.10 -> 192.168.1.1 : tcp 22 via "ppp0";
-    p2 : 192.168.9.1 -> 192.168.1.10 : tcp 80 via "wlan1";
-    p3 : 192.168.1.1 -> 8.8.8.8 : udp 53 via "eth1";
-    p4 : 192.168.1.10 -> 192.168.9.1 : udp 67 via "ppp0";
+    p1 : 192.168.1.222 -> 192.168.1.1 : tcp 57890 -> 22: from "ppp0" to "";
+    p2 : 192.168.9.1 -> 192.168.1.10 : tcp 12121 -> 80 : from "wlan0" to "wlan1";
+    p3 : 192.168.1.1 -> 8.8.8.8 : udp 22222 -> 53 : from "" to "eth1";
+    p4 : 192.168.1.10 -> 192.168.9.1 : udp 56737 -> 67 : from "ppp0" to "eth2";
 }
 
 rules {

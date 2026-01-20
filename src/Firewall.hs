@@ -166,7 +166,7 @@ formatLogs logs = T.unlines $ zipWith formatEntry [1..] logs
                         Nothing -> ""
                         Just pkt' -> "Paquete " `T.append` packid pkt' `T.append` " - "
         in T.justifyRight 4 ' ' (T.pack (show n)) `T.append` ". [" 
-           `T.append` levelStr `T.append` "] " `T.append` pktInfo `T.append` msg
+           `T.append` levelStr `T.append` "] " `T.append` pktInfo `T.append` msg `T.append` "\n"
 
 verboseAction :: Action -> T.Text
 verboseAction Accept = "Accepted"

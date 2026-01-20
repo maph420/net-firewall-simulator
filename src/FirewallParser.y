@@ -43,7 +43,8 @@ import Monads
     INPUT           { TokenInput }
     OUTPUT          { TokenOutput }
     FORWARD         { TokenForward }
-    via             { TokenVia }
+    from            { TokenFrom }
+    to              { TokenTo }
     STRING          { TokenString $$ }
     IDENT           { TokenIdent $$ }
     NUMBER          { TokenNumber $$ }
@@ -110,9 +111,10 @@ Packets : packets '{' PacketList '}' { $3 }
 PacketList : Packet { [$1] }
     | Packet PacketList { $1 : $2 }
 
-Packet : IDENT ':' IP_ADDR '->' IP_ADDR ':' Protocol NUMBER via STRING ';'
-    { % checkValidPort $8 `thenP` \validPort -> checkValidIf $10 `thenP` \validIf ->
-     returnP $ Packet (T.pack $1) (readIP $3) (readIP $5) 0 validPort $7 (T.pack validIf) (T.pack $10) }
+Packet : IDENT ':' IP_ADDR '->' IP_ADDR ':' Protocol NUMBER '->' NUMBER ':' from STRING to STRING ';'
+    { % checkValidPort $8 `thenP` \validSrcPort -> checkValidPort $10 `thenP` \validDstPort ->
+     checkValidIf $13 `thenP` \validInIf -> checkValidIf $15 `thenP` \validOutIf ->
+     returnP $ Packet (T.pack $1) (readIP $3) (readIP $5) validSrcPort validDstPort $7 (T.pack validInIf) (T.pack validOutIf) }
 
 Protocol : tcp { TCP }
     | udp { UDP }
@@ -253,7 +255,8 @@ lexKeywordOrIdent cont tokenRaw = \_ line ->
             "tcp"        -> TokenTCP
             "udp"        -> TokenUDP
             "any"        -> TokenANY
-            "via"        -> TokenVia
+            "from"       -> TokenFrom
+            "to"         -> TokenTo
             "ACCEPT"     -> TokenAccept
             "DROP"       -> TokenDrop
             "REJECT"     -> TokenReject
@@ -304,11 +307,11 @@ checkValidIf str = if (length str) > 15
                     else returnP str
 
 checkValidMAC :: String -> P String
-checkValidMAC macStr = \s l ->
+checkValidMAC macStr =
     let parts = mySplit macStr ':'
-    in if length parts == 6 && all (\p -> length p == 2 && all isHexDigit p) parts
-       then Ok macStr
-       else Failed $ "[Linea " ++ show l ++ "] Dirección MAC inválida: " ++ macStr
+    in if length parts == 6 && all (\p -> (length p == 1 || length p == 2) && all isHexDigit p) parts
+       then returnP macStr
+       else failP $ "Dirección MAC inválida (" ++ macStr ++ ") \nFormato esperado: ?? : ?? : ?? : ?? : ?? : ?? (donde ? es un hexadecimal)"
 
 -- precond: la gramatica debe garantizar que la lista de strings tiene al menos 1 elemento.
 conjunctIPMatches :: [ String ] -> (IPV4.IPv4 -> Match) -> Match
