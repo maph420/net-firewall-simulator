@@ -6,7 +6,8 @@ module Monads
         thenP,
         returnP,
         failP,
-        catchP
+        catchP,
+        mapP
     )
 where
 
@@ -32,13 +33,19 @@ m `thenP` k = \s l-> case m s l of
                          Failed e -> Failed e
                    
 returnP :: a -> P a
-returnP a = \s l-> Ok a
+returnP a = \_ _-> Ok a
 
 -- Operaciones adicionales de la monada (no se usaron aun)
 failP :: String -> P a
-failP err = \s l -> Failed err
+failP err = \_ _ -> Failed err
 
 catchP :: P a -> (String -> P a) -> P a
 catchP m k = \s l -> case m s l of
                         Ok a     -> Ok a
                         Failed e -> k e s l
+
+mapP :: (a -> P b) -> [a] -> P [b]
+mapP f []     = returnP []
+mapP f (x:xs) = f x `thenP` \r ->
+                mapP f xs `thenP` \rs ->
+                returnP (r:rs)

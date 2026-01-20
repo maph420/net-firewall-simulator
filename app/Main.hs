@@ -131,7 +131,7 @@ parseAndLoad filename = do
             case content' of
                 Left err -> return $ Left err
                 Right content ->
-                        case parseFirewall content of
+                        case parseFirewall content  of
                             Failed err -> return $ Left err
                             Ok info -> return $ Right info
 

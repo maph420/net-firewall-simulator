@@ -12,12 +12,14 @@ network {
         subnet = 192.168.1.0/24;   
         interfaces = "ppp0";
     }
-
-// comentario oooo                       
+                 
+    
+    // comentario
+    // ooo
     device pc-lab {
         mac = "DD:EE:FF:11:22:33";
-        ip = 192.168.9.1;          
-        subnet = 192.168.9.0/16;   
+        ip = 192.168.0.0222;          
+        subnet = 192.162.9.0/32;   
         interfaces = "ppp0", "wlan0", "wlan1";
     }
 }

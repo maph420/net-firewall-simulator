@@ -50,7 +50,7 @@ Cada dispositivo se describe con:
 **``interfaces:``** una lista de cadenas de caracteres (encerrar entre `""`) que identifiquen a cada una de las interfaces disponibles del dispositivo, separadas por '`,`'.
 
 > [!IMPORTANT]
-> Para que el programa funcione correctamente, se DEBE definir el dispositivo asociado al firewall, de nombre ``firewall``. Por convención, consideramos al firewall como un dispositivo más en la red.
+> Para que el programa funcione correctamente, se DEBE definir un dispositivo asociado al firewall, de nombre ``firewall``. Por convención, consideramos al firewall como un dispositivo más en la red.
 
 > [!NOTE]
 > Para asignar la subred del firewall, usamos el rango en el cual está contenida la ip publica del mismo. Por ejemplo, para un firewall cuya ip publica (para acceder a internet a traves del router) es 200.3.1.2, se podria usar un rango: 200.3.1.0/24. No afecta a los resultados de la simulacion, asi que es solo una convención.
@@ -58,7 +58,7 @@ Cada dispositivo se describe con:
 
 ### Sección packets
 
-Define los envíos que se llevarán a cabo durante la simulación, es decir, ¿qué máquina le mando qué petición a qué otra máquina?[^1]. Así se definen n paquetes:
+Define los envíos que se llevarán a cabo durante la simulación, es decir, ¿qué máquina le mando qué petición a qué otra máquina?[^1]. Así se definen **N** paquetes:
 ```
 
 packets {
@@ -67,7 +67,7 @@ packet-2 : ???.???.???.??? -> ???.???.???.??? : ??? ?? via "???";
 .
 .
 .
-packet-n: ???.???.???.??? -> ???.???.???.??? : ??? ?? via "???";
+packet-N: ???.???.???.??? -> ???.???.???.??? : ??? ?? via "???";
 }
 
 ```
@@ -76,13 +76,13 @@ Donde los campos corresponden a:
 - La ip de origen
 - La ip de destino
 - El protocolo a utilizar. Los protocolos pueden ser: tcp, udp o any (los dos anteriores)
-- El numero de puerto de destino del paquete. ¿Qué servicio está solicitando? Suele estar estrechamente relacionado con el protocolo seleccionado.
+- El numero de puerto de destino del paquete. Un natural en el rango `[0, 65535]` ¿Qué servicio está solicitando? Suele estar estrechamente relacionado con el protocolo seleccionado.
 - El último campo indica, entre `""`, la interfaz por la cuál se enviará el paquete. (?)
 
 
 ### Sección rules
 
-Acá es cuando entra en juego el firewall. Definimos en esta sección las cadenas de reglas a seguir por el firewall, discriminando si los paquetes: salen del firewall (OUTPUT), son enviadas al firewall (INPUT) o bien pasan por el firewall hacia otro destino (FORWARD)[^2]. Así se define la sección de reglas:
+Acá es cuando entra en juego el firewall. Definimos en esta sección las cadenas de reglas a seguir por el firewall, discriminando si los paquetes: salen del firewall (**OUTPUT**), son enviadas al firewall (**INPUT**) o bien pasan por el firewall hacia otro destino (**FORWARD**)[^2]. Así se define la sección de reglas:
 
 ```
 rules {
@@ -106,23 +106,23 @@ El órden de definición de las cadenas es arbitrario, no debe ser necesariament
 
 Las condiciones que se pueden imponer para cada regla son:
 
-- `-srcip ???.???.???.???, ..., ???.???,???,???`
+- `-srcip ???.???.???.???, ...`
 
-- `-dstip ???.???.???.???, ..., ???.???,???,???`
+- `-dstip ???.???.???.???, ...`
 
-- `-srcsubnet ???.???.???.???/??, ..., ???.???.???.???/??`
+- `-srcsubnet ???.???.???.???/??, ...`
 
-- `-dstsubnet ???.???.???.???/??, ..., ???.???.???.???/??`
+- `-dstsubnet ???.???.???.???/??, ...`
 
 - `-prot` `???`. Donde el protocolo puede ser: ``tcp``, ``udp``, o ``any`` (los dos anteriores).
 
-- `-srcp ??, ??, ..., ??`. Especifica los puertos del nodo origen que emitió el paquete. Los valores son números naturales en el rango `[0, 65535]`.
+- `-srcp ??, ...`. Especifica el/los puertos del nodo origen que emitió el paquete. Los valores son números naturales en el rango `[0, 65535]`.
 
-- `-dstp ??, ??, ..., ??`. Especifica los puertos a los cuales el emisor del paquete quiere acceder. Los valores son números naturales en el rango `[0, 65535]`.
+- `-dstp ??, ...`. Especifica el/los puertos a los cuales el emisor del paquete quiere acceder. Los valores son números naturales en el rango `[0, 65535]`.
 
-- `-inif "???", "???", ..., "???"`. Especifica las interfaces por las cuales sale el paquete desde su origen. Los valores son cadenas de caracteres (las interfaces deben ir encerradas entre `""`).
+- `-inif "???", ..."`. Especifica la/las interfaces por las cuales sale el paquete desde su origen. Los valores son cadenas de caracteres (las interfaces deben ir encerradas entre `""`).
 
-- `-outif "???", "???", ..., "???"`. Especifica las interfaces a las cuales llega el paquete a su destino(?). Los valores son cadenas de caracteres (las interfaces deben ir encerradas entre `""`).
+- `-outif "???", ..."`. Especifica la/las interfaces a las cuales llega el paquete a su destino(?). Los valores son cadenas de caracteres (las interfaces deben ir encerradas entre `""`).
 
 Adicionalmente, se agrega a la semántica la posibilidad de especificar una política por defecto (**default policy**). Esto es, ¿qué acción tomar si el paquete que pasa no coincide con ninguna de las reglas?
 
@@ -130,13 +130,20 @@ Al final de cada definición de una `chain`, opcionalmente se puede terminar con
 
 `-default ACCION;`
 
+> [!NOTE]
+> Al igual que en **iptables**, el órden de definición de las reglas es importante.
+> Las mismas se evaluarán en el mismo orden en el que fueron definidas, según la chain a la que pertenezcan (`INPUT`, `OUTPUT` o `FORWARD`).
+
 ### Comentarios
 
-Se pueden realizar comentarios inline usando doble barra (`//`).
+Se pueden realizar **comentarios de línea** usando doble barra (`//`).
 
 ```
 // Esto es un comentario, no se interpretará como código.
 ```
+
+
+### Ejemplo
 
 Para aclarar todo lo antes mencionado, mostramos un ejemplo de archivo en `test.fws`:
 
@@ -194,6 +201,10 @@ rules {
 
 ```
 
+> [!TIP]
+> Lo unico que debería ser tratado como una cadena de caracteres (es decir, encerrado entre `""`) son las direcciones MAC y las interfaces de red.
+
+
 ## Instalacion
 
 El proyecto corre sobre **stack**, una herramienta que permite gestionar proyectos en **Haskell**.
@@ -210,14 +221,8 @@ Lo cual lleva a una consola de comandos interactiva.
 
 (completar)
 
-> [!TIP]
-> Vale la pena recordar que lo unico que debería ser tratado como una cadena de caracteres (es decir, encerrado entre `""`) son las direcciones MAC y las interfaces de red.
 
-
-[^1]: Lo interesante será cuando dos nodos de subredes distintas se comuniquen. Convenimos que el único escenario en el cual el firewall no se involucra es cuando dos nodos de la misma subred se comunican (tráfico local)
+[^1]: Lo interesante será cuando dos nodos de subredes distintas se comuniquen. Convenimos que el firewall acepta automáticamente los paquetes de tráfico local (un firewall no simulado, directamente ni vería los paquetes porque no pasan por él)
 
 [^2]: Para más información, consultar el man page de iptables (`man iptables`) o [iptables-tutorial](https://www.frozentux.net/iptables-tutorial/iptables-tutorial.html#INPUTCHAIN)
-
-
-
 

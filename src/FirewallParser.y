@@ -5,12 +5,12 @@ import Common
 import qualified Data.Text as T
 import qualified Data.Map.Strict as M
 import qualified Net.IPv4 as IPV4
-import Data.Char (isSpace, isAlpha, isAlphaNum, isDigit)
+import Data.Char (isSpace, isAlpha, isAlphaNum, isDigit, isHexDigit)
 import Data.Word (Word8)
 import Monads
 }
 
-%monad { P } { thenP } { returnP }
+%monad { P } { thenP } { returnP } 
 %name parseScript
 %tokentype { Token }
 %lexer {lexer} {TokenEOF}
@@ -87,17 +87,18 @@ DeviceList : Device { [ $1] }
 Device : device IDENT '{' DeviceFields '}' 
     { Device (T.pack $2) Nothing (macAddr $4) (ipAddr $4) (subnetRange $4) (ifaces $4) }
 
-SubnetVal : STRING {  parseSubnet $1 }
-          | IP_ADDR '/' NUMBER { readSubnet $1 $3 }
-          ;
+SubnetVal : IP_ADDR '/' NUMBER { % readSubnet $1 $3 }
+          
 
 DeviceFields : mac '=' STRING ';' ip '=' IP_ADDR ';' subnet '=' SubnetVal ';' interfaces '=' IfList ';'
-    { DeviceFieldsData
-        { macAddr = T.pack $3
+    { % checkValidMAC $3 `thenP` \validMAC -> mapP checkValidIf $15 `thenP` \validIfs -> 
+    returnP $ DeviceFieldsData
+        { macAddr = T.pack validMAC
         , ipAddr = readIP $7
         , subnetRange = $11
-        , ifaces = map T.pack $15
+        , ifaces = map T.pack validIfs
         } }
+
 
 IfList : STRING { [$1] }
     | STRING ',' IfList { $1 : $3 }
@@ -110,7 +111,8 @@ PacketList : Packet { [$1] }
     | Packet PacketList { $1 : $2 }
 
 Packet : IDENT ':' IP_ADDR '->' IP_ADDR ':' Protocol NUMBER via STRING ';'
-    { Packet (T.pack $1) (readIP $3) (readIP $5) 0 $8 $7 (T.pack $10) (T.pack $10) }
+    { % checkValidPort $8 `thenP` \validPort -> checkValidIf $10 `thenP` \validIf ->
+     returnP $ Packet (T.pack $1) (readIP $3) (readIP $5) 0 validPort $7 (T.pack validIf) (T.pack $10) }
 
 Protocol : tcp { TCP }
     | udp { UDP }
@@ -119,10 +121,7 @@ Protocol : tcp { TCP }
 Rules : rules '{' ChainDecls '}' { M.fromList $3 }
 
 ChainDecls : {- empty -} { [] }
-    | ChainDecl ChainDecls { $1 : $2 }
-
--- ?
-ChainDecl : ChainBlock { $1 }
+    | ChainBlock ChainDecls { $1 : $2 }
 
 ChainBlock : chain CHAIN_NAME '{' Stmts '}' { ($2, $4) }
 
@@ -156,8 +155,10 @@ SpecList : Spec { $1 }
 Spec : '-' srcip IPList { conjunctIPMatches $3 MatchSrcIP }
     | '-' dstip IPList { conjunctIPMatches $3 MatchDstIP }
     | '-' prot Protocol { MatchProt $3 }
-    | '-' inif IfList { conjunctIfMatches $3 MatchInIf }
-    | '-' outif IfList { conjunctIfMatches $3 MatchOutIf}
+    | '-' inif IfList { % mapP checkValidIf $3 `thenP` \vIfs -> 
+                          returnP $ conjunctIfMatches vIfs MatchInIf }
+    | '-' outif IfList { % mapP checkValidIf $3 `thenP` \vIfs -> 
+                          returnP $ conjunctIfMatches vIfs MatchOutIf }
     | '-' srcp PortSpec { MatchSrcPort $3 }
     | '-' dstp PortSpec { MatchDstPort $3 }
     | '-' srcsubnet SubnetList { conjunctIPRangeMatches $3 MatchSrcSubnet }
@@ -171,8 +172,8 @@ SubnetList : IP_ADDR '/' NUMBER { [($1, $3)] }
     | IP_ADDR '/' NUMBER ',' SubnetList { ($1, $3) : $5 }
 
 
-PortSpec : NUMBER { [$1] }
-    |  PortList { $1 }
+PortSpec : NUMBER { % checkValidPort $1 `thenP` \p -> returnP [p] }
+    | PortList { % mapP checkValidPort $1 `thenP` \ps -> returnP ps }
 
 PortList : NUMBER { [$1] }
     | NUMBER ',' PortList { $1 : $3 }
@@ -218,11 +219,12 @@ lexer cont s = \line ->
 -- numero detectado: retornar token segun si es IP o un natural
 lexIPOrNumber :: (Token -> P a) -> String -> P a
 lexIPOrNumber cont tokenRaw = \_ line ->
-    let (tokenStr, rest) = span (\c -> isDigit c || c == '.') tokenRaw
-        token = if any (== '.') tokenStr
-                then TokenIP tokenStr
-                else TokenNumber (read tokenStr)
-    in cont token rest line
+  let (tokenStr, rest) = span (\c -> isDigit c || c == '.') tokenRaw
+  in if any (== '.') tokenStr
+       then case IPV4.decodeString tokenStr of
+              Just _  -> cont (TokenIP tokenStr) rest line
+              Nothing -> Failed $ "[Linea " ++ show line ++ "] Direccion IPv4 inválida (" ++ tokenStr ++ ")"
+       else cont (TokenNumber (read tokenStr)) rest line
 
 -- sacar validacion de ip
 lexString :: (Token -> P a) -> String -> P a
@@ -267,38 +269,46 @@ lexKeywordOrIdent cont tokenRaw = \_ line ->
             "dstsubnet"  -> TokenDstSubnet
             "do"         -> TokenDo
             "default"    -> TokenDefault
-            _            -> if isValidIP ident then TokenIP ident else TokenIdent ident
+            _            -> TokenIdent ident
     in cont token rest line
 
--- helper (si voy a hacer AST validation, no hace falta aca)
-isValidIP :: String -> Bool
-isValidIP s = 
-    let parts = split '.' s
-    in length parts == 4 && all (\p -> not (null p) && all isDigit p && let n = read p in n >= 0 && n <= 255) parts
     
-split :: Char -> String -> [String]
-split _ [] = []
-split c s = let (part, rest) = break (== c) s in part : split c (drop 1 rest)
+mySplit :: String -> Char -> [String]
+mySplit [] _ = []
+mySplit str c = let (slice, rest) = break (== c) str in slice : (mySplit (drop 1 rest) c)
 
--- funcion helper para leer una direccion IPv4 desde string
+-- deberia alcanzar con un fromJust (IPV4.decodeString), se supone que el lexer
+-- ya hizo la verificacion, pero por las dudas tiramos el error, por si el lexer falla
 readIP :: String -> IPV4.IPv4
 readIP ipStr = case IPV4.decodeString ipStr of
     Just ip -> ip
-    Nothing -> error $ "Invalid IP address: " ++ ipStr
+    Nothing -> error $ "Direccion IP invalida: " ++ ipStr
 
--- funcion helper para leer un rango de subnet IPv4 desde string
-readSubnet :: String -> Int -> IPV4.IPv4Range
-readSubnet ipStr prefix = case IPV4.decodeString ipStr of
-    Just ip -> IPV4.range ip (fromIntegral prefix)
-    Nothing -> error $ "Invalid IP address in subnet: " ++ ipStr
+-- monadico para chequear por errores en el prefijo de red
+readSubnet :: String -> Int -> P IPV4.IPv4Range
+readSubnet ipStr pref = case IPV4.decodeString ipStr of
+    Just ip -> do
+                if (pref < 0 || pref > 32) 
+                then failP $ "Rango CIDR inválido para la subred (" ++ show pref ++ ")"
+                else returnP $ IPV4.range ip (fromIntegral pref)
+    Nothing -> failP $ "Direccion IP invalida en rango de subnet: " ++ ipStr
 
--- helper para parsear una string que representa una subnet, e.g. "192.168.1.0/24"
-parseSubnet :: String -> IPV4.IPv4Range
-parseSubnet s = 
-    let (ipStr, rest) = break (== '/') s
-        prefixStr = drop 1 rest
-        prefix = read prefixStr
-    in readSubnet ipStr prefix
+
+checkValidPort :: Int -> P Int
+checkValidPort portnum  | (portnum < 0 || portnum > 65535) = failP $ "Numero de puerto inválido (" ++ (show portnum) ++ ")"
+                        | otherwise = returnP portnum
+                        
+checkValidIf :: String -> P String
+checkValidIf str = if (length str) > 15 
+                    then failP $ "Nombre de interfaz de red invalido, muy largo (" ++ str ++ ")"
+                    else returnP str
+
+checkValidMAC :: String -> P String
+checkValidMAC macStr = \s l ->
+    let parts = mySplit macStr ':'
+    in if length parts == 6 && all (\p -> length p == 2 && all isHexDigit p) parts
+       then Ok macStr
+       else Failed $ "[Linea " ++ show l ++ "] Dirección MAC inválida: " ++ macStr
 
 -- precond: la gramatica debe garantizar que la lista de strings tiene al menos 1 elemento.
 conjunctIPMatches :: [ String ] -> (IPV4.IPv4 -> Match) -> Match
@@ -306,8 +316,8 @@ conjunctIPMatches [ipStr] construct = construct (readIP ipStr)
 conjunctIPMatches (ipStr : ipStrs) construct = AndMatch (construct (readIP ipStr)) (conjunctIPMatches ipStrs construct)
 
 conjunctIPRangeMatches :: [(String, Int)] -> (IPV4.IPv4Range -> Match) -> Match
-conjunctIPRangeMatches [(ipRangeStr, n)] c = c (readSubnet ipRangeStr n)
-conjunctIPRangeMatches ((ipRangeStr, n) : ipRangeStrs) c = AndMatch (c (readSubnet ipRangeStr n)) (conjunctIPRangeMatches ipRangeStrs c)
+conjunctIPRangeMatches [(ipStr, n)] c = c (IPV4.range (readIP ipStr) (fromIntegral n))
+conjunctIPRangeMatches ((ipStr, n) : ipStrs) c = AndMatch (c (IPV4.range (readIP ipStr) (fromIntegral n))) (conjunctIPRangeMatches ipStrs c)
 
 conjunctIfMatches :: [String] -> (T.Text -> Match) -> Match
 conjunctIfMatches [ifStr] c = c (T.pack ifStr)
@@ -315,7 +325,7 @@ conjunctIfMatches (ifstr : ifstrs) c = AndMatch (c $ T.pack ifstr) (conjunctIfMa
 
 -- Manejador de errores de parseo usado por Happy
 happyError :: P a
-happyError = \s i -> Failed $ "Linea " ++ show i ++ ": Error de parseo cerca de ----->" ++ take 10 s ++ "<-----"
+happyError = \s i -> Failed $ "[Linea " ++ show i ++ "] Error de parseo cerca de ----->" ++ take 10 s ++ "<-----"
 
 -- Funcion a invocar para parsear.
 parseFirewall :: String -> ParseResult Info
