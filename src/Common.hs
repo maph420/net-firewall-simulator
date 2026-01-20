@@ -58,7 +58,7 @@ data Device = Device {
     devDesc     :: Maybe T.Text, -- descripcion del dispositivo, opcional
     macDir      :: T.Text,
     ipv4Dir     :: IPV4.IPv4,
-    subnet      :: Maybe IPV4.IPv4Range, -- obligatoriamente pertenece a una subnet??
+    subnet      :: IPV4.IPv4Range, 
     interfaces  :: [Interface]
 } deriving Show
 
@@ -148,6 +148,7 @@ data Info = Info {
 -- Informacion que lleva el entorno, "procesar" la info
 data Env = Env {
     deviceInterfaces :: M.Map IPV4.IPv4 [Interface],
+    deviceSubnets :: M.Map IPV4.IPv4 IPV4.IPv4Range,
     firewallIP :: IPV4.IPv4,
     rulesChains :: RulesChains
 } deriving Show
@@ -224,6 +225,6 @@ data ParseResult a = Ok a | Failed String
 data DeviceFieldsData = DeviceFieldsData
     { macAddr :: T.Text
     , ipAddr :: IPV4.IPv4
-    , subnetRange :: Maybe IPV4.IPv4Range
+    , subnetRange :: IPV4.IPv4Range
     , ifaces :: [Interface]
     }

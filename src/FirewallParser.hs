@@ -212,7 +212,7 @@ happyReduce_6 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Ha
 happyReduce_6 = happySpecReduce_1  4# happyReduction_6
 happyReduction_6 (HappyTerminal (TokenString happy_var_1))
          =  HappyAbsSyn9
-                 (Just (parseSubnet happy_var_1)
+                 (parseSubnet happy_var_1
         )
 happyReduction_6 _  = notHappyAtAll 
 
@@ -222,7 +222,7 @@ happyReduction_7 (HappyTerminal (TokenNumber happy_var_3))
         _
         (HappyTerminal (TokenIP happy_var_1))
          =  HappyAbsSyn9
-                 (Just (readSubnet happy_var_1 happy_var_3)
+                 (readSubnet happy_var_1 happy_var_3
         )
 happyReduction_7 _ _ _  = notHappyAtAll 
 

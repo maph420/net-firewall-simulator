@@ -1,25 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 -- para que trate a los String como Data.Text 
 
--- implementar, dados los AST de: la config de red, los envios realizados y las reglas, el firewall que decidirá qué paquetes
--- pasan y cuales no.
-
--- -srcip 192.168.1.0 -dstip 192.168.2.0 -prot udp -outif eth0
--- MatchAnd (MatchAnd (MarchSrcIP 192.168.1.0) (MatchDstIP 192.168.2.0)) (MatchAnd (MatchProt UDP) (MatchOutIf "eth0"))
-
--- -dstip 10.0.0.1 -prot tcp -inif eth1 -outif ppp0 -dstp [80]
--- MatchAnd (MatchAnd (MatchDstIP 10.0.0.1) (MatchProt TCP)) (MatchAnd (MatchInIf "eth1") (MatchAnd (MatchOutIf "ppp0") (MatchDstIP PortList)))
-
--- -srcip 10.0.0.2/16 -prot udp -dstp [53,443]
--- MatchAnd (MatchAnd (MatchSrcSubnet 10.0.0.2/16) (MatchProt UDP)) (MatchSrcPort [53, 443])
-
--- lo que nos llega a nosotros desp del parseo, 
-
 module Firewall
     ( 
         runFirewallSimulation,
         buildEnv,
-        formatLogs
+        formatLogs,
+        formatResults
     ) where
 
 import Common
@@ -29,6 +16,7 @@ import Control.Monad.Reader (ask, runReaderT)
 import qualified Net.IPv4 as IPV4
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
+import Text.Printf (printf)
 import PrettyPrinter (renderMatch)
 
 -- Verificamos que el paquete provenga de una IP conocida y de una interfaz de red existente del origen.
@@ -62,15 +50,21 @@ getTargetChain p = do
 
 processPacket :: Packet -> RWMonad Action
 processPacket p = do
-    securityCheck p -- loggeea info extra
-    chain <- getTargetChain p
-    evalChain chain p
+    sbpbf <- shouldBeProcessedByFirewall p
+    if (not sbpbf)
+        then do 
+                logMsg Warning ("El paquete fue automáticamente aceptado, en efecto es un envío intra-subnet (realmente no pasa por el firewall)") (Just p)
+                return Accept
+        else do
+                securityCheck p -- loggeea info extra
+                chain <- getTargetChain p
+                evalChain chain p
 
 -- conj de reglas vacias -> no corto antes -> no matchea ninguna regla (esto es si ni siquiera se especifico drop policy para la chain)
 evalChain :: [Rule] -> Packet -> RWMonad Action
 evalChain [ ] _ = return Drop
 evalChain (r:rs) pkt = do
-                    success <- eval (ruleMatch r) pkt
+                    let success = eval (ruleMatch r) pkt
                     if success 
                         then do
                             logMsg Information ("Regla matcheada: " `T.append` (renderMatch $ ruleMatch r) `T.append` " (id: " `T.append` (ruleId r) `T.append`
@@ -80,9 +74,8 @@ evalChain (r:rs) pkt = do
                             logMsg Information ("Regla NO matcheada: "  `T.append` (renderMatch $ ruleMatch r) `T.append` " (id " `T.append` (ruleId r) `T.append` ")") (Just pkt)
                             evalChain rs pkt
 
--- evaluador puro???
-eval :: Match -> Packet -> RWMonad Bool
-eval m pkt = let matched = eval' m in return matched
+eval :: Match -> Packet -> Bool
+eval m pkt = eval' m
     where
         eval' :: Match -> Bool
         eval'  MatchAny = True
@@ -101,7 +94,17 @@ eval m pkt = let matched = eval' m in return matched
         eval' (NotMatch m') = not (eval' m')
 
 
--- funca a priori
+-- Determinar si un paquete debería ser manejado por el firewall
+shouldBeProcessedByFirewall :: Packet -> RWMonad Bool
+shouldBeProcessedByFirewall p = do
+    env <- ask
+    
+    -- Obtener subredes de src y dst
+    let srcSubnet = M.lookup (srcip p) (deviceSubnets env) 
+        dstSubnet = M.lookup (dstip p) (deviceSubnets env)
+    return $ not $ srcSubnet == dstSubnet
+
+
 buildEnv :: Info -> Either T.Text Env
 buildEnv info = do
     -- encontrar el dispositivo de firewall, por nombre
@@ -116,12 +119,17 @@ buildEnv info = do
     let interfaceMap = M.fromList $ 
             map (\d -> (ipv4Dir d, interfaces d)) (infoNetwork info)
     
+
+    -- armar el mapa de subredes
+    let subnetMap = M.fromList $ 
+            map (\d -> (ipv4Dir d, subnet d)) (infoNetwork info)
+
     return Env {
         deviceInterfaces = interfaceMap,
+        deviceSubnets = subnetMap,
         firewallIP = ipv4Dir firewall,
         rulesChains = infoRules info
     }
-
 
 -- Dada una estructura de informacion del parseo retorna o bien:
 -- Una lista de tuplas (paquete_procesado, accion_tomada)
@@ -146,15 +154,27 @@ runSimulation env packets =
 
 -- pasar de logs a texto.
 formatLogs :: [LogEntry] -> T.Text
-formatLogs logs = T.unlines $ map formatLogEntry logs
+formatLogs logs = T.unlines $ zipWith formatEntry [1..] logs
   where
-    formatLogEntry :: LogEntry -> T.Text
-    formatLogEntry (LogEntry level msg mpkt) = 
+    formatEntry :: Int -> LogEntry -> T.Text
+    formatEntry n (LogEntry level msg mpkt) = 
         let levelStr = case level of
                          Information -> "INFO"
                          Warning -> "ADVERTENCIA"
                          Error -> "ERROR"
             pktInfo = case mpkt of
                         Nothing -> ""
-                        Just pkt' -> "{Paquete " `T.append` packid pkt' `T.append` "}: "
-        in "{" `T.append` levelStr `T.append` "} " `T.append` pktInfo `T.append` msg 
+                        Just pkt' -> "Paquete " `T.append` packid pkt' `T.append` " - "
+        in T.justifyRight 4 ' ' (T.pack (show n)) `T.append` ". [" 
+           `T.append` levelStr `T.append` "] " `T.append` pktInfo `T.append` msg
+
+verboseAction :: Action -> T.Text
+verboseAction Accept = "Accepted"
+verboseAction Drop = "Dropped"
+verboseAction Reject = "Rejected"
+
+formatResults :: [(Packet, Action)] -> T.Text
+formatResults pas = T.pack $ concatMap formatLine pas
+  where
+    formatLine (pkt, act) = 
+        printf "%-15s : \t%s\n" (show $ packid pkt) (T.unpack $ verboseAction act)

@@ -87,8 +87,8 @@ DeviceList : Device { [ $1] }
 Device : device IDENT '{' DeviceFields '}' 
     { Device (T.pack $2) Nothing (macAddr $4) (ipAddr $4) (subnetRange $4) (ifaces $4) }
 
-SubnetVal : STRING { Just (parseSubnet $1) }
-          | IP_ADDR '/' NUMBER { Just (readSubnet $1 $3) }
+SubnetVal : STRING {  parseSubnet $1 }
+          | IP_ADDR '/' NUMBER { readSubnet $1 $3 }
           ;
 
 DeviceFields : mac '=' STRING ';' ip '=' IP_ADDR ';' subnet '=' SubnetVal ';' interfaces '=' IfList ';'

@@ -10,7 +10,7 @@ import FirewallParser (parseFirewall)
 import Common
 import Control.Exception (catch, IOException)
 import Data.Text as T
-import Firewall (runFirewallSimulation, formatLogs)
+import Firewall (runFirewallSimulation, formatLogs, formatResults)
 
 -- State of the interactive shell
 data ShellState = ShellState
@@ -94,7 +94,7 @@ handleCommand state cmd = case cmd of
             Right info -> do
                 outputStrLn "Configuracion cargada..."
                 let (resols, logs) = runFirewallSimulation info
-                outputStrLn $ "Decisiones tomadas sobre cada paquete: " ++ (Prelude.show resols)
+                outputStrLn $ "Decisiones tomadas sobre cada paquete: \n" ++ (T.unpack (formatResults resols))
                 outputStrLn $ "Logs extraidos: \n" ++ (T.unpack (formatLogs logs))
                 return $ state { currentConfig = Just info }
     
