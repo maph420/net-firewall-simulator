@@ -55,7 +55,6 @@ data PacketTarget = Input | Output | Forward deriving (Eq, Show, Ord)
 
 data Device = Device {
     devName     :: T.Text, -- nombre del dispostivio
-    devDesc     :: Maybe T.Text, -- descripcion del dispositivo, opcional
     macDir      :: T.Text,
     ipv4Dir     :: IPV4.IPv4,
     subnet      :: IPV4.IPv4Range, 
@@ -165,7 +164,6 @@ data LogEntry = LogEntry {
 
 data Token
     = TokenDevice String
-    | TokenDeviceDescription
     | TokenDeviceMac 
     | TokenDeviceIP
     | TokenDeviceSubnet
@@ -181,8 +179,6 @@ data Token
     | TokenUDP
     | TokenANY
     | TokenComma
-    | TokenOpenSquareBracket
-    | TokenCloseSquareBracket
     | TokenRules
     | TokenChain
     | TokenInput
@@ -190,6 +186,7 @@ data Token
     | TokenForward
     | TokenFrom
     | TokenTo
+    | TokenSlash
     | TokenString String
     | TokenIdent String
     | TokenNumber Int
@@ -203,7 +200,6 @@ data Token
     | TokenNot
     | TokenLParen
     | TokenRParen
-    | TokenSlash
     | TokenNetwork
     | TokenSrcIP
     | TokenDstIP

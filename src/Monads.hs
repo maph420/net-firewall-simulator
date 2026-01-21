@@ -45,7 +45,7 @@ catchP m k = \s l -> case m s l of
                         Failed e -> k e s l
 
 mapP :: (a -> P b) -> [a] -> P [b]
-mapP f []     = returnP []
+mapP _ []     = returnP []
 mapP f (x:xs) = f x `thenP` \r ->
                 mapP f xs `thenP` \rs ->
                 returnP (r:rs)

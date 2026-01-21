@@ -94,7 +94,8 @@ handleCommand state cmd = case cmd of
             Right info -> do
                 outputStrLn "Configuracion cargada..."
                 let (resols, logs) = runFirewallSimulation info
-                outputStrLn $ "Decisiones tomadas sobre cada paquete: \n" ++ (T.unpack (formatResults resols))
+                outputStrLn $ Prelude.show info
+               -- outputStrLn $ "Decisiones tomadas sobre cada paquete: \n" ++ (T.unpack (formatResults resols))
                 outputStrLn $ "Logs extraidos: \n" ++ (T.unpack (formatLogs logs))
                 return $ state { currentConfig = Just info }
     

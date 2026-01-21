@@ -1,0 +1,55 @@
+network {
+    device firewall {
+        mac = "00:11:22:33:44:55";
+        ip = 192.168.1.1;         
+        subnet = 192.168.1.0/24;   
+        interfaces = "eth0", "eth1";
+    }
+
+    device servidor-web {
+        mac = "AA:BB:CC:DD:EE:FF";
+        ip = 192.168.1.10;         
+        subnet = 192.168.1.0/24;   
+        interfaces = "ppp0";
+    }
+                 
+    
+    // comentario
+    // ooo
+    device pc-lab {
+        mac = "DD:EE:FF:11:22:33";
+        ip = 192.168.0.0222;          
+        subnet = 192.162.9.0/32;   
+        interfaces = "ppp0", "wlan0", "wlan1";
+    }
+}
+
+packets {
+    p1 : 192.168.1.10 -> 192.168.1.1 : tcp 111 -> 22 : from "ppp0" to "ppp1";
+    p2 : 192.168.9.1 -> 192.168.1.10 : tcp 233 -> 80 : from "wlan1" to "wlan0";
+    p3 : 192.168.1.1 -> 8.8.8.8 : udp 222 -> 53 : from "eth1" to "eth1";
+        p5 : 202.22.1.0 -> 192.168.9.1 : tcp 12121-> 22 : from "eth0" to "eth0";
+    paquete-sus: 192.168.1.10 -> 192.168.9.1 : udp 65531 -> 67 : from "wlan4" to "wlan3";
+    p4 : 192.168.1.10 -> 192.168.9.1 : udp 44423-> 67 : from "ppp0" to "ppp1";
+}
+
+rules {
+    chain INPUT {
+        -srcip 192.168.1.1 -srcip 188.12.22.22 -do ACCEPT ;
+        -dstip 10.0.0.1 -dstp 80 -do DROP;
+        -srcsubnet 192.168.1.0/24 -do REJECT;
+    }
+    chain FORWARD {
+        -prot tcp -dstp 80,443 -do ACCEPT;
+        -prot udp -dstp 53 -do ACCEPT;
+    }
+    chain OUTPUT {
+        -dstip 8.8.8.8 -do DROP;
+    }
+
+    chain INPUT {
+        -dstip 8.8.8.8 -inif "eth0", "ppp0" -do REJECT;
+        -default DROP;
+    }
+}
+

@@ -20,7 +20,6 @@ import Monads
 
 %token
     device          { TokenDevice $$ }
-    desc            { TokenDeviceDescription }
     mac             { TokenDeviceMac }
     ip              { TokenDeviceIP }
     subnet          { TokenDeviceSubnet }
@@ -36,8 +35,6 @@ import Monads
     udp             { TokenUDP }
     any             { TokenANY }
     ','             { TokenComma }
-    '['             { TokenOpenSquareBracket }
-    ']'             { TokenCloseSquareBracket }
     rules           { TokenRules }
     chain           { TokenChain }
     INPUT           { TokenInput }
@@ -52,8 +49,6 @@ import Monads
     '('             { TokenLParen }
     ')'             { TokenRParen }
     '!'             { TokenNot }
-    '&'             { TokenAnd }
-    '|'             { TokenOr }
     '-'             { TokenDash }
     '/'             { TokenSlash }
     network         { TokenNetwork }
@@ -72,9 +67,7 @@ import Monads
     DROP            { TokenDrop }
     REJECT          { TokenReject }
 
-%right '|'
-%left '&'
-%nonassoc not
+
 
 %%
 
@@ -86,7 +79,7 @@ DeviceList : Device { [ $1] }
     | Device DeviceList { $1 : $2 }
 
 Device : device IDENT '{' DeviceFields '}' 
-    { Device (T.pack $2) Nothing (macAddr $4) (ipAddr $4) (subnetRange $4) (ifaces $4) }
+    { Device (T.pack $2) (macAddr $4) (ipAddr $4) (subnetRange $4) (ifaces $4) }
 
 SubnetVal : IP_ADDR '/' NUMBER { % readSubnet $1 $3 }
           
@@ -127,8 +120,6 @@ ChainDecls : {- empty -} { [] }
 
 ChainBlock : chain CHAIN_NAME '{' Stmts '}' { ($2, $4) }
 
-ChainBody : Stmts { $1 }
-
 Stmts : {- empty -} { [] }
     | Stmt Stmts { $1 : $2 }
 
@@ -148,11 +139,11 @@ ACTION : ACCEPT { Accept }
     | DROP { Drop }
     | REJECT { Reject }
 
+
 SpecList : Spec { $1 }
     | SpecList Spec { AndMatch $1 $2 }
-    | SpecList '&' Spec { AndMatch $1 $3 }
-    | SpecList '|' Spec { OrMatch $1 $3 }
     | '!' Spec { NotMatch $2 }
+
 
 Spec : '-' srcip IPList { conjunctIPMatches $3 MatchSrcIP }
     | '-' dstip IPList { conjunctIPMatches $3 MatchDstIP }
@@ -174,8 +165,7 @@ SubnetList : IP_ADDR '/' NUMBER { [($1, $3)] }
     | IP_ADDR '/' NUMBER ',' SubnetList { ($1, $3) : $5 }
 
 
-PortSpec : NUMBER { % checkValidPort $1 `thenP` \p -> returnP [p] }
-    | PortList { % mapP checkValidPort $1 `thenP` \ps -> returnP ps }
+PortSpec : PortList { % mapP checkValidPort $1 `thenP` \ps -> returnP ps }
 
 PortList : NUMBER { [$1] }
     | NUMBER ',' PortList { $1 : $3 }
@@ -199,16 +189,12 @@ lexer cont s = \line ->
             | c == '"'  -> lexString cont cs s line
             | isAlpha c -> lexKeywordOrIdent cont (c:cs) s line
             | otherwise -> case c of
-                '&' -> cont TokenAnd cs line
-                '|' -> cont TokenOr cs line
                 '!' -> cont TokenNot cs line
                 '(' -> cont TokenLParen cs line
                 ')' -> cont TokenRParen cs line
                 '/' -> cont TokenSlash cs line
                 '{' -> cont TokenOpenBracket cs line
                 '}' -> cont TokenCloseBracket cs line
-                '[' -> cont TokenOpenSquareBracket cs line
-                ']' -> cont TokenCloseSquareBracket cs line
                 '=' -> cont TokenAssign cs line
                 ';' -> cont TokenSemicolon cs line
                 ':' -> cont TokenColon cs line
@@ -241,7 +227,6 @@ lexKeywordOrIdent cont tokenRaw = \_ line ->
     let (ident, rest) = span (\c -> isAlphaNum c || c == '.' || c == '-') tokenRaw
         token = case ident of
             "device"     -> TokenDevice ident
-            "desc"       -> TokenDeviceDescription
             "mac"        -> TokenDeviceMac
             "ip"         -> TokenDeviceIP
             "subnet"     -> TokenDeviceSubnet

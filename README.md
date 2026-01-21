@@ -43,9 +43,9 @@ Cada dispositivo se describe con:
 
 **``mac:``** debe ir encerrada entre `""`, se trata de una cadena de caracteres identificatoria a una dirección **MAC** válida.
 
-**``ip:``** una dirección `IPv4` válida.
+**``ip:``** una dirección **IPv4** válida.
 
-**``subnet:``** el rango de direcciones ``IPv4`` de la subred a la cual pertenece el dispositivo. Usar notación **CIDR** (más abajo hay un ejemplo). La subnet debe ser consistente con la dirección ``IPv4`` suministrada.
+**``subnet:``** el rango de direcciones **IPv4** de la subred a la cual pertenece el dispositivo. Usar notación **CIDR** (más abajo hay un ejemplo). La subnet debe ser consistente con la dirección **IPv4** suministrada.
 
 **``interfaces:``** una lista de cadenas de caracteres (encerrar entre `""`) que identifiquen a cada una de las interfaces disponibles del dispositivo, separadas por '`,`'.
 
@@ -77,9 +77,9 @@ Donde los campos corresponden a:
 - La ip de destino
 - El protocolo a utilizar. Los protocolos pueden ser: tcp, udp o any (los dos anteriores)
 - El numero de puerto de origen del paquete. Un natural en el rango `[0, 65535]`. Sirve cuando un nodo pide multiples servicios a otro nodo.
-- El numero de puerto de destino del paquete. Un natural en el rango `[0, 65535]` Sirve para identificar el servicio que el remitente está solicitando. Suele estar relacionado con el protocolo seleccionado.
+- El numero de puerto de destino del paquete. Un natural en el rango `[0, 65535]`. Sirve para identificar el servicio que el remitente está solicitando. Suele estar relacionado con el protocolo seleccionado.
 - Entre `""`, la interfaz por la cual el paquete **llega** al firewall. Si el paquete sale del firewall, se puede ignorar el campo dejandolo vacío (`""`).
-- Entre `""`, la interfaz por la cual el paquete **sale** al firewall. Si el paquete es destinado al firewall, se puede ignorar el campo dejandolo vacío (`""`).
+- Entre `""`, la interfaz por la cual el paquete **sale** del firewall. Si el paquete es destinado al firewall, se puede ignorar el campo dejandolo vacío (`""`).
 
 > [!NOTE]
 > Por fines didácticos del firewall, si un paquete proviene del internet (fuera de la red que protege el firewall), 
@@ -122,15 +122,15 @@ Las condiciones que se pueden imponer para cada regla son:
 
 - `-prot` `???`. Donde el protocolo puede ser: ``tcp``, ``udp``, o ``any`` (los dos anteriores).
 
-- `-srcp ??, ...`. Especifica el/los puertos del nodo origen que emitió el paquete. Los valores son números naturales en el rango `[0, 65535]`.
+- `-srcp ??, ...` Especifica el/los puertos del nodo origen que emitió el paquete. Los valores son números naturales en el rango `[0, 65535]`.
 
-- `-dstp ??, ...`. Especifica el/los puertos a los cuales el emisor del paquete quiere acceder. Los valores son números naturales en el rango `[0, 65535]`.
+- `-dstp ??, ...` Especifica el/los puertos a los cuales el emisor del paquete quiere acceder. Los valores son números naturales en el rango `[0, 65535]`.
 
-- `-inif "???", ..."`. Especifica la/las interfaces por las cuales el paquete entrará al firewall. Sólo es compatible con las cadenas: `INPUT` y `FORWARD`. Los valores son cadenas de caracteres (las interfaces deben ir encerradas entre `""`).
+- `-inif "???", ..."` Especifica la/las interfaces por las cuales el paquete entrará al firewall. Sólo es compatible con las cadenas: `INPUT` y `FORWARD`. Los valores son cadenas de caracteres (las interfaces deben ir encerradas entre `""`).
 
-- `-outif "???", ..."`. Especifica la/las interfaces por las cuales el paquete sale, desde el nodo remitente. Sólo es compatible con las cadenas: `OUTPUT` y `FORWARD`. Los valores son cadenas de caracteres (las interfaces deben ir encerradas entre `""`).
+- `-outif "???", ..."` Especifica la/las interfaces por las cuales el paquete sale, desde el nodo remitente. Sólo es compatible con las cadenas: `OUTPUT` y `FORWARD`. Los valores son cadenas de caracteres (las interfaces deben ir encerradas entre `""`).
 
-Adicionalmente, se agrega a la semántica la posibilidad de especificar una política por defecto (**default policy**). Esto es, ¿qué acción tomar si el paquete que pasa no coincide con ninguna de las reglas?
+Adicionalmente, se agrega a la semántica la posibilidad de especificar una política por defecto (**default policy**). Esto es, ¿qué acción tomar si el paquete que pasa no coincide con ninguna de las reglas definidas?
 
 Al final de cada definición de una `chain`, opcionalmente se puede terminar con:
 
