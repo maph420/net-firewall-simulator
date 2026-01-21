@@ -117,8 +117,9 @@ data Match = MatchAny
     | MatchSrcPort PortList
     | MatchDstPort PortList
     | AndMatch Match Match -- encadenar todo lo que pide 1 regla
-    | OrMatch Match Match -- para multipuertos: e.g. que matchee puerto src == 80 o == 443
-    | NotMatch Match -- capaz no hace falta (chequear) 
+    | NotMatch Match
+    | OrMatch Match Match
+
     deriving (Show)
 
 
@@ -135,7 +136,7 @@ data Rule = Rule {
 -- asi: reverse r5 : r4 : r3 : r2 : r1 : [] = [r1,r2,r3,r4,r5]
 
 -- para mayor claridad semantica
-type RulesChains = M.Map PacketTarget [Rule]
+type RulesChains = [(PacketTarget, [Rule])]
 
 -- aca está toda la información. esta estructura podria verse como el entorno de una mónada reader/writer. averiguar.
 data Info = Info {

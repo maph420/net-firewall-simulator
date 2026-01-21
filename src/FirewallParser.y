@@ -3,7 +3,6 @@ module FirewallParser (parseFirewall) where
 
 import Common
 import qualified Data.Text as T
-import qualified Data.Map.Strict as M
 import qualified Net.IPv4 as IPV4
 import Data.Char (isSpace, isAlpha, isAlphaNum, isDigit, isHexDigit)
 import Data.Word (Word8)
@@ -113,7 +112,7 @@ Protocol : tcp { TCP }
     | udp { UDP }
     | any { ANY }
 
-Rules : rules '{' ChainDecls '}' { M.fromList $3 }
+Rules : rules '{' ChainDecls '}' { $3 }
 
 ChainDecls : {- empty -} { [] }
     | ChainBlock ChainDecls { $1 : $2 }

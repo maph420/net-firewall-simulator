@@ -42,14 +42,18 @@ rules {
     chain FORWARD {
         -prot tcp -dstp 80,443 -do ACCEPT;
         -prot udp -dstp 53 -do ACCEPT;
+        -default DROP;
+        -default ACCEPT;
     }
     chain OUTPUT {
         -dstip 8.8.8.8 -do DROP;
+        -prot tcp -prot udp -do ACCEPT;
     }
 
-    chain INPUT {
+    chain FORWARD {
         -dstip 8.8.8.8 -inif "eth0", "ppp0" -do REJECT;
         -default DROP;
+        -default ACCEPT;
     }
 }
 

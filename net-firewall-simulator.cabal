@@ -30,6 +30,7 @@ library
       FirewallParser
       Monads
       PrettyPrinter
+      Validator
   other-modules:
       Paths_net_firewall_simulator
   hs-source-dirs:

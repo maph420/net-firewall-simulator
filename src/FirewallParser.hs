@@ -336,7 +336,7 @@ happyReduction_17 (_ `HappyStk`
         _ `HappyStk`
         happyRest)
          = HappyAbsSyn16
-                 (M.fromList happy_var_3
+                 (happy_var_3
         ) `HappyStk` happyRest
 
 happyReduce_18 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)

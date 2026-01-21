@@ -7,7 +7,9 @@ module Monads
         returnP,
         failP,
         catchP,
-        mapP
+        mapP,
+        ErrAST,
+        throwError
     )
 where
 
@@ -15,6 +17,7 @@ import Control.Monad.Writer.Strict (Writer, tell)
 import Control.Monad.Reader (ReaderT, lift)
 import Common
 import qualified Data.Text as T
+import Control.Monad.Except(throwError, ExceptT)
 
 -- Se crea una monada usando un transformador, "envolviendo" la monada writer sobre la transformadora reader
 type RWMonad a = ReaderT Env (Writer [LogEntry]) a
@@ -49,3 +52,7 @@ mapP _ []     = returnP []
 mapP f (x:xs) = f x `thenP` \r ->
                 mapP f xs `thenP` \rs ->
                 returnP (r:rs)
+
+-- monada para validacion del AST
+-- permite llamar a IO en sus acciones monadicas, al hacer un liftIO
+type ErrAST a = ExceptT T.Text IO a
