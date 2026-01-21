@@ -18,16 +18,16 @@ network {
      // se debe definir de manera obligatoria.
      device firewall {
         mac = "00:11:22:33:44:55";
-        ip = 192.168.1.1;         
-        subnet = 192.168.1.0/24;   
+        ip = 197.168.1.1;         
+        subnet = 197.168.1.0/24;   
         interfaces = "eth0", "eth1";
     }
 }
 
 packets {
-    p1 : 192.168.1.222 -> 192.168.1.1 : tcp 57890 -> 22: from "ppp0" to "";
+    p1 : 192.168.1.222 -> 197.168.1.1 : tcp 57890 -> 22: from "ppp0" to "";
     p2 : 192.168.9.1 -> 192.168.1.10 : tcp 12121 -> 80 : from "wlan0" to "wlan1";
-    p3 : 192.168.1.1 -> 8.8.8.8 : udp 22222 -> 53 : from "" to "eth1";
+    p3 : 197.168.1.1 -> 8.8.8.8 : udp 22222 -> 53 : from "" to "eth1";
     p4 : 192.168.1.10 -> 192.168.9.1 : udp 56737 -> 67 : from "ppp0" to "eth2";
 }
 

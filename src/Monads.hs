@@ -1,7 +1,7 @@
 module Monads 
     (
-        RWMonad,
-        logMsg,
+        WriterMonad,
+        logMsg',
         P,
         thenP,
         returnP,
@@ -19,12 +19,12 @@ import Common
 import qualified Data.Text as T
 import Control.Monad.Except(throwError, ExceptT)
 
--- Se crea una monada usando un transformador, "envolviendo" la monada writer sobre la transformadora reader
-type RWMonad a = ReaderT Env (Writer [LogEntry]) a
+
+type WriterMonad a = Writer [LogEntry] a
 
 -- Funcion helper para loggueo
-logMsg :: LogLevel -> T.Text -> Maybe Packet -> RWMonad ()
-logMsg level msg pkt = lift $ tell [LogEntry level msg pkt]
+logMsg' :: LogLevel -> T.Text -> Maybe Packet -> WriterMonad ()
+logMsg' level msg mpkt = tell [LogEntry level msg mpkt]
 
 -- Monada para el lexer, guarda dos valores de estado: la continuacion del cómputo y el numero de linea
 type P a = String -> Int -> ParseResult a
@@ -55,4 +55,4 @@ mapP f (x:xs) = f x `thenP` \r ->
 
 -- monada para validacion del AST
 -- permite llamar a IO en sus acciones monadicas, al hacer un liftIO
-type ErrAST a = ExceptT T.Text IO a
+type ErrAST a = Either T.Text a

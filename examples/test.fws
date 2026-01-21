@@ -47,3 +47,37 @@ rules {
         -dstip 8.8.8.8 -do DROP;
     }
 }
+
+
+
+
+Info {
+    
+    
+    infoNetwork = [Device {devName = "pc0", macDir = "AA:BB:CC:DD:EE:FF", ipv4Dir = ipv4 10 0 1 23, subnet = IPv4Range {ipv4RangeBase = ipv4 10 0 1 0, ipv4RangeLength = 24}, interfaces = ["wlan1"]},
+    Device {devName = "pc1", macDir = "AA:BB:CC:DD:EF:FF", ipv4Dir = ipv4 10 0 1 25, subnet = IPv4Range {ipv4RangeBase = ipv4 10 0 1 0, ipv4RangeLength = 24}, interfaces = ["wlan1"]},
+    Device {devName = "pc2", macDir = "AA:BB:CC:DD:01:FF", ipv4Dir = ipv4 10 0 1 27, subnet = IPv4Range {ipv4RangeBase = ipv4 10 0 1 0, ipv4RangeLength = 24}, interfaces = ["wlan1"]},
+    Device {devName = "db", macDir = "AA:BB:CC:CA:FE:FF", ipv4Dir = ipv4 10 0 2 30, subnet = IPv4Range {ipv4RangeBase = ipv4 10 0 2 0, ipv4RangeLength = 24}, interfaces = ["eth0"]},
+    Device {devName = "backup", macDir = "AA:BB:CC:CA:FF:FF", ipv4Dir = ipv4 10 0 2 31, subnet = IPv4Range {ipv4RangeBase = ipv4 10 0 2 0, ipv4RangeLength = 24}, interfaces = ["eth0"]},
+    Device {devName = "sv1", macDir = "AA:BB:CC:CB:FF:FF", ipv4Dir = ipv4 181 16 1 17, subnet = IPv4Range {ipv4RangeBase = ipv4 181 16 1 16, ipv4RangeLength = 28}, interfaces = ["eth1"]},
+    Device {devName = "sv2", macDir = "AA:BB:CC:CC:FF:FF", ipv4Dir = ipv4 181 16 1 22, subnet = IPv4Range {ipv4RangeBase = ipv4 181 16 1 16, ipv4RangeLength = 28}, interfaces = ["eth1"]},
+    Device {devName = "sv3", macDir = "AA:BB:CC:CD:FF:FF", ipv4Dir = ipv4 181 16 1 24, subnet = IPv4Range {ipv4RangeBase = ipv4 181 16 1 16, ipv4RangeLength = 28}, interfaces = ["eth1"]},
+    Device {devName = "firewall", macDir = "AA:BB:CC:CE:FF:FF", ipv4Dir = ipv4 200 3 1 2, subnet = IPv4Range {ipv4RangeBase = ipv4 200 3 1 0, ipv4RangeLength = 24}, interfaces = ["eth1"]}], 
+    
+    infoPackets = [Packet {packid = "p-ext1", srcip = ipv4 211 0 0 12, dstip = ipv4 181 16 1 22, srcport = 2233, dstport = 22, protocol = TCP, ingressif = "eth1", egressif = "eth1"},
+    Packet {packid = "p-ext2", srcip = ipv4 211 0 0 14, dstip = ipv4 181 16 1 17, srcport = 53444, dstport = 22, protocol = TCP, ingressif = "eth1", egressif = "wlan1"}], 
+    
+    
+    
+    infoRules = fromList [
+        (Forward,[Rule {ruleId = "rule", ruleMatch = AndMatch (AndMatch (AndMatch (MatchSrcSubnet (IPv4Range {ipv4RangeBase = ipv4 10 0 1 0, ipv4RangeLength = 24})) (MatchInIf "wlan1")) (MatchOutIf "eth0")) (MatchDstSubnet (IPv4Range {ipv4RangeBase = ipv4 10 0 2 0, ipv4RangeLength = 24})), ruleAction = Drop, ruleLog = Nothing},
+        Rule {ruleId = "rule", ruleMatch = MatchSrcSubnet (IPv4Range {ipv4RangeBase = ipv4 10 0 1 0, ipv4RangeLength = 24}), ruleAction = Accept, ruleLog = Nothing},
+        Rule {ruleId = "rule", ruleMatch = AndMatch (AndMatch (AndMatch (MatchOutIf "eth1") (MatchDstIP (ipv4 181 16 1 17))) (MatchProt TCP)) (MatchDstPort [80,44,53]), ruleAction = Accept, ruleLog = Nothing},
+        Rule {ruleId = "rule", ruleMatch = AndMatch (AndMatch (AndMatch (MatchOutIf "eth1") (MatchDstIP (ipv4 181 16 1 22))) (MatchProt TCP)) (MatchDstPort [22]), ruleAction = Accept, ruleLog = Nothing},
+        Rule {ruleId = "rule", ruleMatch = AndMatch (AndMatch (AndMatch (MatchOutIf "eth1") (MatchDstIP (ipv4 181 16 1 24))) (MatchProt TCP)) (MatchDstPort [103,143]), ruleAction = Accept, ruleLog = Nothing},
+        Rule {ruleId = "default", ruleMatch = MatchAny, ruleAction = Drop, ruleLog = Nothing}]),
+        
+        (Input, reglas....),
+
+        (Output, reglas....)
+        ]}
