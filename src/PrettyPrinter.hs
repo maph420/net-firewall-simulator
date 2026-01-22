@@ -5,6 +5,9 @@ module PrettyPrinter
   )
 where
 
+-- Implementa un Pretty printing para la estructura Match, la cual es expuesta en los logs
+-- Como el resto de las estructuras no se muestran por pantalla, no se les realizó una función de pretty print.
+
 import  Common
 import Prettyprinter as PP
 import qualified Net.IPv4 as IPV4
@@ -29,5 +32,4 @@ renderMatch :: Match -> T.Text
 renderMatch m = renderStrict (layoutPretty opts doc)
   where
     doc = "<<<" <+> printMatch m <+> ">>>"
-    -- de lo contrario, las listas de puertos se imprimian con saltos de linea
-    opts = LayoutOptions { layoutPageWidth = Unbounded }
+    opts = LayoutOptions { layoutPageWidth = Unbounded } -- de lo contrario, las listas de puertos se imprimian con saltos de linea

@@ -12,22 +12,13 @@ import Control.Exception (catch, IOException)
 import Data.Text as T
 import Firewall (runFirewallSimulation, formatLogs, formatResults)
 
--- State of the interactive shell
-data ShellState = ShellState
-    { currentConfig :: Maybe Info
-    , exitFlag :: Bool
-    }
-
 exampleFile :: String
 exampleFile = "examples/test.fws"
 
 firewallSimFileExtension :: String
 firewallSimFileExtension = "fws"
 
-initialState :: ShellState
-initialState = ShellState Nothing False
-
--- Available commands
+-- Comandos a disposicion
 data Command = Load String | Quit | Help | Unknown String
 
 firewallText :: String
@@ -45,7 +36,7 @@ simulatorText = "\tSimulator"
 currVersionText :: String
 currVersionText = "1.0"
 
--- Main REPL
+-- punto de entrada del programa
 main :: IO ()
 main = do
     putStrLn "======================================================="
@@ -53,51 +44,47 @@ main = do
     putStrLn "=======================================================\n"
     putStrLn "Escribir :help o :? para ver los comandos disponibles."
     putStrLn ""
-    runInputT defaultSettings (shellLoop initialState)
+    runInputT defaultSettings shellLoop
 
-shellLoop :: ShellState -> InputT IO ()
-shellLoop state = do
-    if exitFlag state then
-        return ()
-    else do
-        input <- getInputLine "FW> "
-        
-        case input of
-            Nothing -> return ()  
-            Just "" -> shellLoop state 
-            Just line -> do
-                let cmd = parseCommand line
-                newState <- handleCommand state cmd
-                shellLoop newState
+shellLoop :: InputT IO ()
+shellLoop = do
+    input <- getInputLine "FW> "
+    case input of
+        Nothing -> return () 
+        Just "" -> shellLoop
+        Just line -> do
+            let cmd = parseCommand line
+            continue <- handleCommand cmd
+            if continue 
+                then shellLoop
+                else return ()
 
--- Parse user input into a Command
+-- Interpretar texto ingresado por consola en un comando (se permite cargar archivos con espacio)
 parseCommand :: String -> Command
-parseCommand input
-    | (hd == ":load" || hd == ":l") && Prelude.length parts > 1 = Load (Prelude.unwords $ (Prelude.drop 1) parts)
-    | hd == ":quit" || hd == ":q" = Quit
-    | hd == ":help" || hd == ":h" || hd == ":?" = Help
-    | otherwise = Unknown input
+parseCommand input  | (safeHdParts == ":load" || safeHdParts == ":l") && Prelude.length parts > 1 = Load (Prelude.unwords $ (Prelude.drop 1) parts)
+                    | safeHdParts == ":quit" || safeHdParts == ":q" = Quit
+                    | safeHdParts == ":help" || safeHdParts == ":h" || safeHdParts == ":?" = Help
+                    | otherwise = Unknown input
   where
     parts = Prelude.words input
-    hd = case parts of
-        [] -> ""
-        (x:_) -> x
+    safeHdParts = case parts of
+                        [] -> ""
+                        (x:_) -> x
 
--- Handle commands
-handleCommand :: ShellState -> Command -> InputT IO ShellState
-handleCommand state cmd = case cmd of
+-- Manejar comandos segun lo ingresado por terminal
+handleCommand :: Command -> InputT IO Bool
+handleCommand cmd = case cmd of
     Load filename -> do 
         liftIO $ putStrLn $ "Cargando archivo: " ++ filename
         result <- liftIO $ parseAndLoad filename
         case result of
             Left err -> do
                 outputStrLn $ "Error: " ++ err
-                return state
+                return True
             Right info -> do
                 outputStrLn "Configuracion cargada..."
                 outputStrLn $ "----------------------------------------------------------------------------"
                 let (resols, logs) = runFirewallSimulation info
-                --outputStrLn $ Prelude.show info
                 let res = formatResults resols
                 if (T.null res)
                     then outputStrLn $ "Sin decisiones tomadas.\n"
@@ -112,11 +99,11 @@ handleCommand state cmd = case cmd of
                 outputStrLn $ "================="
                 outputStrLn $ T.unpack $ formatLogs logs
                 outputStrLn $ "----------------------------------------------------------------------------"
-                return $ state { currentConfig = Just info }
+                return True
     
     Quit -> do
         outputStrLn "Saliendo del simulador de firewall..."
-        return $ state { exitFlag = True }
+        return False
     
     Help -> do
         outputStrLn "Comandos disponibles:"
@@ -130,14 +117,14 @@ handleCommand state cmd = case cmd of
         outputStrLn $ "  :load " ++ exampleFile 
         outputStrLn $ "  :l " ++ exampleFile 
         outputStrLn ""
-        return state
+        return True
     
     Unknown input -> do
         outputStrLn $ "Comando desconocido: " ++ input
         outputStrLn "Escribir :help o :? para ver los comandos disponibles."
-        return state
+        return True
 
--- Parse and load a firewall configuration file
+-- Cargar un archivo de firewall, de manera segura
 parseAndLoad :: String -> IO (Either String Info)
 parseAndLoad filename = do
     let prefix = Prelude.drop ((Prelude.length filename) - 4) filename
@@ -151,5 +138,3 @@ parseAndLoad filename = do
                         case parseFirewall content  of
                             Failed err -> return $ Left err
                             Ok info -> return $ Right info
-
-

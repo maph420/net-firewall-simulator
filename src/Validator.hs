@@ -15,28 +15,21 @@ import qualified Data.Set as S
 astValidation :: Info -> ErrAST Info
 astValidation inf = do 
                         let rules = infoRules inf
-                        let network = infoNetwork inf
-                        let packets = infoPackets inf
+                            network = infoNetwork inf
+                            packets = infoPackets inf
 
-                        checkRepeatedChains rules -- una misma chain, fue declarada mas de una vez?
-                        checkSubnetRanges network -- toda ip suministrada coincide con la subnet en donde esta definida?
-                        checkFirewall network -- existe dispositivo llamado 'firewall'? es ruteable a internet? (para recibir paquetes del exterior)
-
-                        -- verificar por unicidad de identificadores de dispositivos y paquetes
+                        checkRepeatedChains rules 
+                        checkSubnetRanges network 
+                        checkFirewall network 
+                        -- unicidad de identificadores de dispositivos, paquetes, dir mac, ip
                         checkForIdentifiers network devName (\dn -> "el dispositivo de nombre '" `T.append` dn `T.append` "' aparece repetido\n")
-
                         checkForIdentifiers packets packid (\paid -> "el paquete de nombre '" `T.append` paid `T.append` "' aparece repetido\n")
-
                         checkForIdentifiers network macDir (\md -> "la direccion MAC '" `T.append` md `T.append` "' aparece repetida\n")
-
                         checkForIPIdentif network (\ipdir -> "la direccion IPv4 '" `T.append` (IPV4.encode ipdir) `T.append` "' aparece repetida.\n")
-
-                        -- verificar que ninguna regla de la cadena INPUT tenga una restriccion '-outif'
-                        -- ídem OUTPUT no tenga ninguna restriccion '-inif'
-                        checkChainRules rules
-
+                        checkChainRules rules  
                         return inf
 
+-- Verifica si una misma chain fue declarada mas de una vez
 checkRepeatedChains :: RulesChains -> ErrAST ()
 checkRepeatedChains rulc = mapM_ check rulc
     where
@@ -48,16 +41,17 @@ checkRepeatedChains rulc = mapM_ check rulc
                                     then throwError $ "cadena " `T.append` (T.show target) `T.append` " aparece repetida\n" 
                                     else return ()
 
+-- Verifica que toda ip suministrada coincida con la subnet en donde esta definida
 checkSubnetRanges :: Network -> ErrAST ()
 checkSubnetRanges = mapM_ checkDevice 
+    where
+        checkDevice :: Device -> ErrAST ()
+        checkDevice d = if (subnet d) `IPV4.contains` (ipv4Dir d) 
+                            then return ()
+                            else throwError $ "la ip " `T.append` (encode (ipv4Dir d)) `T.append` 
+                            " no pertenece al rango subnet: " `T.append` (encodeRange (subnet d)) `T.append` "\n"
 
-
-checkDevice :: Device -> ErrAST ()
-checkDevice d = if (subnet d) `IPV4.contains` (ipv4Dir d) 
-                    then return ()
-                    else throwError $ "la ip " `T.append` (encode (ipv4Dir d)) `T.append` " no pertenece al rango subnet: " `T.append` (encodeRange (subnet d)) `T.append` "\n"
-
--- Verifica si un identificador dado aparece repetido en la lista pasada. Se pasa el extractor de campo para saber por cuál del registro se quiere chequear.
+-- Verifica si un identificador dado aparece repetido en la lista pasada. Se pasa el extractor de campo para saber por cual del registro se quiere chequear.
 -- Si hay repeticion, llama a una funcion que formatea el error.
 checkForIdentifiers :: [a] -> (a -> T.Text) -> (T.Text -> T.Text) -> ErrAST ()
 checkForIdentifiers xs fieldExtr formatErr = checkForIdentifiers' xs S.empty
@@ -69,6 +63,7 @@ checkForIdentifiers xs fieldExtr formatErr = checkForIdentifiers' xs S.empty
                                             then throwError $ formatErr identif
                                             else checkForIdentifiers' ys (S.insert identif acc)
 
+-- Similar a checkForIdentifiers, pero trabaja con ipv4 en vez de identificadores de texto
 checkForIPIdentif :: Network -> (IPV4.IPv4 -> T.Text) -> ErrAST ()
 checkForIPIdentif net formatErr = checkForIPIdentif' net S.empty
     where
@@ -79,6 +74,7 @@ checkForIPIdentif net formatErr = checkForIPIdentif' net S.empty
                                         then throwError $ formatErr currip
                                         else checkForIPIdentif' xs (S.insert currip acc)
 
+-- Verifica que exista un dispositivo llamado 'firewall' y que sea ruteable a internet (para recibir paquetes del exterior)
 checkFirewall :: Network -> ErrAST ()
 checkFirewall [] = throwError $ "no se reconoce ningún dispostivo llamado 'firewall', abortando\n"
 checkFirewall (d:ds) = if (T.toLower $ devName d) == "firewall"
@@ -87,23 +83,23 @@ checkFirewall (d:ds) = if (T.toLower $ devName d) == "firewall"
                                 else throwError $ "la IP del dispositivo de firewall debe ser ruteable en internet (IP pública). Ip provista: " `T.append` (IPV4.encode (ipv4Dir d))
                         else checkFirewall ds
 
--- Función para verificar si un Match contiene un tipo específico
-containsMatchType :: Match -> Match -> Bool
-containsMatchType (MatchInIf _) (MatchInIf _) = True
-containsMatchType (MatchOutIf _) (MatchOutIf _) = True
-containsMatchType ty (AndMatch m1 m2) = containsMatchType ty m1 || containsMatchType ty m2
-containsMatchType _ _ = False
-
-checkRuleForChain :: PacketTarget -> Rule -> ErrAST ()
-checkRuleForChain target rule
-  | target == Input && containsMatchType (MatchOutIf "") (ruleMatch rule) =
-      throwError $ "No está permitido el uso de la opción '-outif' en una cadena INPUT \n"
-  | target == Output && containsMatchType (MatchInIf "") (ruleMatch rule) =
-      throwError $ "No está permitido el uso de la opción '-inif' en una cadena OUTPUT \n\n"
-  | otherwise = return ()
-
-checkChainRule :: (PacketTarget, [Rule]) -> ErrAST ()
-checkChainRule (pt, rs) = mapM_ (checkRuleForChain pt) rs
-
+-- Verifica que ninguna regla de la cadena INPUT tenga una restriccion '-outif', ni una OUTPUT una '-inif'
 checkChainRules :: RulesChains -> ErrAST ()
 checkChainRules = mapM_ checkChainRule
+    where
+        checkChainRule :: (PacketTarget, [Rule]) -> ErrAST ()
+        checkChainRule (pt, rs) = mapM_ (checkRuleForChain pt) rs
+
+        checkRuleForChain :: PacketTarget -> Rule -> ErrAST ()
+        checkRuleForChain target rule   | target == Input && containsMatchType (MatchOutIf "") (ruleMatch rule) =
+            throwError $ "No está permitido el uso de la opción '-outif' en una cadena INPUT \n"
+                                        | target == Output && containsMatchType (MatchInIf "") (ruleMatch rule) =
+            throwError $ "No está permitido el uso de la opción '-inif' en una cadena OUTPUT \n\n"
+                                        | otherwise = return ()
+
+        -- Verificar si un Match contiene un tipo específico
+        containsMatchType :: Match -> Match -> Bool
+        containsMatchType (MatchInIf _) (MatchInIf _) = True
+        containsMatchType (MatchOutIf _) (MatchOutIf _) = True
+        containsMatchType ty (AndMatch m1 m2) = containsMatchType ty m1 || containsMatchType ty m2
+        containsMatchType _ _ = False

@@ -436,7 +436,7 @@ happyReduction_29 ((HappyAbsSyn24  happy_var_4) `HappyStk`
         (HappyAbsSyn25  happy_var_1) `HappyStk`
         happyRest)
          = HappyAbsSyn23
-                 (Rule (T.pack "rule") happy_var_1 happy_var_4 Nothing
+                 (Rule (T.pack "") happy_var_1 happy_var_4 Nothing
         ) `HappyStk` happyRest
 
 happyReduce_30 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
@@ -734,10 +734,68 @@ parseScript = happySomeParser where
 happySeq = happyDontSeq
 
 
+data Token
+    = TokenDevice String
+    | TokenDeviceMac 
+    | TokenDeviceIP
+    | TokenDeviceSubnet
+    | TokenDeviceInterfaces
+    | TokenOpenBracket
+    | TokenCloseBracket
+    | TokenAssign
+    | TokenSemicolon
+    | TokenPackets
+    | TokenArrow
+    | TokenColon
+    | TokenTCP
+    | TokenUDP
+    | TokenANY
+    | TokenComma
+    | TokenRules
+    | TokenChain
+    | TokenInput
+    | TokenOutput
+    | TokenForward
+    | TokenFrom
+    | TokenTo
+    | TokenSlash
+    | TokenString String
+    | TokenIdent String
+    | TokenNumber Int
+    | TokenIP String
+    | TokenAccept
+    | TokenDrop
+    | TokenReject
+    | TokenDash
+    | TokenAnd
+    | TokenLParen
+    | TokenRParen
+    | TokenNetwork
+    | TokenSrcIP
+    | TokenDstIP
+    | TokenProt
+    | TokenInIf
+    | TokenOutIf
+    | TokenSrcPort
+    | TokenDstPort
+    | TokenSrcSubnet
+    | TokenDstSubnet
+    | TokenDo
+    | TokenDefault
+    | TokenEOF     
+    deriving Show
+    
+-- Estructura intermedia para realizar el parseo de un dispositivo
+data DeviceFieldsData = DeviceFieldsData
+    { macAddr :: T.Text
+    , ipAddr :: IPV4.IPv4
+    , subnetRange :: IPV4.IPv4Range
+    , ifaces :: [Interface]
+    }
+
 -- obtener numero de linea del estado de la monada      
 getLineNo :: P Int
 getLineNo = \s l -> Ok l
-
 
 lexer :: (Token -> P a) -> P a
 lexer cont s = \line -> 
@@ -775,13 +833,11 @@ lexIPOrNumber cont tokenRaw = \_ line ->
               Nothing -> Failed $ "[Linea " ++ show line ++ "] Direccion IPv4 inválida (" ++ tokenStr ++ ")"
        else cont (TokenNumber (read tokenStr)) rest line
 
--- sacar validacion de ip
 lexString :: (Token -> P a) -> String -> P a
 lexString cont s = \_ line -> 
     case break (== '"') s of
         (str, '"':rest) -> cont (TokenString str) rest line
         _               -> Failed $ "String no cerrado en línea " ++ show line
-
 
 lexKeywordOrIdent :: (Token -> P a) -> String -> P a
 lexKeywordOrIdent cont tokenRaw = \_ line -> 
@@ -821,19 +877,19 @@ lexKeywordOrIdent cont tokenRaw = \_ line ->
             _            -> TokenIdent ident
     in cont token rest line
 
-    
+-- Dada una cadena, retornar una lista de slices separadas por el separador especificado
 mySplit :: String -> Char -> [String]
 mySplit [] _ = []
 mySplit str c = let (slice, rest) = break (== c) str in slice : (mySplit (drop 1 rest) c)
 
--- deberia alcanzar con un fromJust (IPV4.decodeString), se supone que el lexer
--- ya hizo la verificacion, pero por las dudas tiramos el error, por si el lexer falla
+-- Esta funcion se llama durante el parseo. No deberia hacer falta verificar que efectivamente sea una ip (ya verifico el parser)
+-- pero por las dudas se deja el chequeo
 readIP :: String -> IPV4.IPv4
 readIP ipStr = case IPV4.decodeString ipStr of
     Just ip -> ip
     Nothing -> error $ "Direccion IP invalida: " ++ ipStr
 
--- monadico para chequear por errores en el prefijo de red
+-- Monadico para chequear por errores en el prefijo de red
 readSubnet :: String -> Int -> P IPV4.IPv4Range
 readSubnet ipStr pref = case IPV4.decodeString ipStr of
     Just ip -> do
@@ -841,7 +897,6 @@ readSubnet ipStr pref = case IPV4.decodeString ipStr of
                 then failP $ "Rango CIDR inválido para la subred (" ++ show pref ++ ")"
                 else returnP $ IPV4.range ip (fromIntegral pref)
     Nothing -> failP $ "Direccion IP invalida en rango de subnet: " ++ ipStr
-
 
 checkValidPort :: Int -> P Int
 checkValidPort portnum  | (portnum < 0 || portnum > 65535) = failP $ "Numero de puerto inválido (" ++ (show portnum) ++ ")"
@@ -859,7 +914,7 @@ checkValidMAC macStr =
        then returnP macStr
        else failP $ "Dirección MAC inválida (" ++ macStr ++ ") \nFormato esperado: ?? : ?? : ?? : ?? : ?? : ?? (donde ? es un hexadecimal)"
 
--- precond: la gramatica debe garantizar que la lista de strings tiene al menos 1 elemento.
+-- como precondicion, para estas funciones las producciones de la gramatica deben garantizar que la lista de strings tenga al menos 1 elemento.
 conjunctIPMatches :: [ String ] -> (IPV4.IPv4 -> Match) -> Match
 conjunctIPMatches [ipStr] construct = construct (readIP ipStr)
 conjunctIPMatches (ipStr : ipStrs) construct = AndMatch (construct (readIP ipStr)) (conjunctIPMatches ipStrs construct)
@@ -872,7 +927,7 @@ conjunctIfMatches :: [String] -> (T.Text -> Match) -> Match
 conjunctIfMatches [ifStr] c = c (T.pack ifStr)
 conjunctIfMatches (ifstr : ifstrs) c = AndMatch (c $ T.pack ifstr) (conjunctIfMatches ifstrs c)
 
--- Manejador de errores de parseo usado por Happy
+-- Esta funcion se invoca al ocurrir un error de parseo
 happyError :: P a
 happyError = \s i -> Failed $ "[Linea " ++ show i ++ "] Error de parseo cerca de ----->" ++ take 10 s ++ "<-----"
 

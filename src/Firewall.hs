@@ -3,7 +3,6 @@
 module Firewall
     ( 
         runFirewallSimulation,
-        buildConfig,
         formatLogs,
         formatResults
     ) where
@@ -17,25 +16,23 @@ import qualified Data.Text as T
 import Text.Printf (printf)
 import PrettyPrinter (renderMatch)
 
--- Agregar un Id a cada regla de cada chain.
+
+--------------------------
+-- Funciones auxiliares --
+--------------------------
+
+-- Agregar un Id a cada regla de cada chain
 addRuleIds :: Info -> Info
 addRuleIds info = info { infoRules = map addIdsToChain (infoRules info) }
   where
     addIdsToChain (target, rules) = (target, zipWith (\i r -> r {ruleId = "Rule Id " <> T.pack (show i)}) ([1..] :: [Int]) rules)
-
--- Configuracion del firewall
-data FirewallConfig = FirewallConfig {
-    fwIP :: IPV4.IPv4,
-    fwRules :: RulesChains,
-    fwDevices :: [Device]
-}
 
 -- Buscar dispositivo por IP 
 findDeviceByIP :: IPV4.IPv4 -> [Device] -> Maybe Device
 findDeviceByIP _ [] = Nothing
 findDeviceByIP ip (d:ds) = if (ipv4Dir d) == ip then Just d else findDeviceByIP ip ds
 
--- Determinar el target del paquete
+-- Determinar el target del paquete, basado en si lo envia/recibe el firewall, o no
 getPacketTarget :: Packet -> IPV4.IPv4 -> PacketTarget
 getPacketTarget pkt fwIPAddr
     | dstip pkt == fwIPAddr = Input
@@ -43,8 +40,8 @@ getPacketTarget pkt fwIPAddr
     | otherwise = Forward
 
 -- Obtener reglas para el target
-getRulesForTarget :: PacketTarget -> RulesChains -> [Rule]
-getRulesForTarget target chains = case filter (\(t, _) -> t == target) chains of
+getRulesByTarget :: PacketTarget -> RulesChains -> [Rule]
+getRulesByTarget target chains = case filter (\(t, _) -> t == target) chains of
                                 [(_, rules)] -> rules
                                 _ -> [] 
 
@@ -52,14 +49,35 @@ getRulesForTarget target chains = case filter (\(t, _) -> t == target) chains of
 adjustPacketInIf :: [Device] -> Packet -> Packet
 adjustPacketInIf devices pkt =
     case (findDeviceByIP (srcip pkt) devices) of
-        Nothing -> pkt { ingressif = defaultFwIf }  -- IP desconocida => viene de internet, convenimos usar "eth3"
-        Just _ -> pkt  -- IP conocida => mantener interfaz original
+        Nothing -> pkt { ingressif = defaultFwIf }  -- IP desconocida => viene de internet, convenimos usar eth3
+        Just _ -> pkt 
 
 adjustPacketOutIf :: [Device] -> Packet -> Packet
 adjustPacketOutIf devices pkt =
     case (findDeviceByIP (dstip pkt) devices) of
-        Nothing -> pkt { egressif = defaultFwIf }  -- IP desconocida => viene de internet, convenimos usar "eth3"
-        Just _ -> pkt  -- IP conocida => mantener interfaz original
+        Nothing -> pkt { egressif = defaultFwIf }  -- IP desconocida => viene de internet, convenimos usar eth3
+        Just _ -> pkt
+
+
+--------------------------------------------
+-- Funciones de verificacion del firewall --
+--------------------------------------------
+
+-- Verifica si el paquete se envía desde y hacia una misma subnet (no pasa por firewall)
+isIntraSubnetPacket :: Packet -> [Device] -> Bool
+isIntraSubnetPacket p devices =
+    case (findDeviceByIP (srcip p) devices, findDeviceByIP (dstip p) devices) of
+        (Just src, Just dst) -> subnet src == subnet dst
+        _ -> False
+
+-- Verifica si el paquete se envía desde y hacia una IP remota (no pasa por firewall)
+isExtToExtPacket :: Packet -> [Device] -> Bool
+isExtToExtPacket p devices = 
+    isNothing (findDeviceByIP (srcip p) devices) && 
+    isNothing (findDeviceByIP (dstip p) devices)
+  where
+    isNothing Nothing = True
+    isNothing (Just _) = False
 
 -- Verificacion de seguridad (con ajuste de interfaz para internet)
 securityCheck :: Packet -> [Device] -> WriterMonad ()
@@ -90,21 +108,10 @@ securityCheck p devices = do
                 else do logMsg' Warning ("Interfaz de salida incorrecta para " `T.append` devName dstDevice 
                                `T.append` ": " `T.append` egressif p) (Just p)
 
--- Verifica si el paquete se envía desde y hacia una misma subnet (no pasa por firewall)
-isIntraSubnetPacket :: Packet -> [Device] -> Bool
-isIntraSubnetPacket p devices =
-    case (findDeviceByIP (srcip p) devices, findDeviceByIP (dstip p) devices) of
-        (Just src, Just dst) -> subnet src == subnet dst
-        _ -> False
 
--- Verifica si el paquete se envía desde y hacia una IP remota (no pasa por firewall)
-isExtToExtPacket :: Packet -> [Device] -> Bool
-isExtToExtPacket p devices = 
-    isNothing (findDeviceByIP (srcip p) devices) && 
-    isNothing (findDeviceByIP (dstip p) devices)
-  where
-    isNothing Nothing = True
-    isNothing (Just _) = False
+--------------------------------------
+-- Funciones de logica del firewall --
+--------------------------------------
 
 -- Procesar paquete con configuración explícita
 processPacket :: FirewallConfig -> Packet -> WriterMonad Action
@@ -126,13 +133,10 @@ processPacket config p = do
                 else do
                     securityCheck adjustedPkt fwConf
                     let target = getPacketTarget adjustedPkt (fwIP config)
-                        rules = getRulesForTarget target (fwRules config)
+                        rules = getRulesByTarget target (fwRules config)
                     evalChain rules adjustedPkt
-
-          
-          
-
-        
+ 
+                  
 -- Evaluar cadena de reglas
 evalChain :: [Rule] -> Packet -> WriterMonad Action
 evalChain [] _ = return Drop
@@ -173,6 +177,7 @@ buildConfig info = do
     let firewallDevices = filter (\d -> T.toLower (devName d) == "firewall") 
                            (infoNetwork validatedInfo)
     
+    -- El lexer ya deberia haber constatado que existe 1 y solo 1 firewall, pero por las dudas chequeamo
     firewall <- case firewallDevices of
         [d] -> Right d
         _ -> Left "Error: El validador fallo en verificar el firewall"
@@ -183,6 +188,10 @@ buildConfig info = do
         fwDevices = infoNetwork validatedInfo
     }
 
+--------------------------------------
+-- funcion para iniciar simulacion ---
+--------------------------------------
+
 runFirewallSimulation :: Info -> ([(Packet, Action)], [LogEntry])
 runFirewallSimulation info = 
     -- primero aplicamos las id antes de verificar.
@@ -191,17 +200,21 @@ runFirewallSimulation info =
         Left err -> 
             ([], [LogEntry Error err Nothing])
         Right config -> runSimulation config (infoPackets infoWithIds)
+    where
+        runSimulation :: FirewallConfig -> [Packet] -> ([(Packet, Action)], [LogEntry])
+        runSimulation config packets = 
+            runWriter $ processAll config packets
 
-runSimulation :: FirewallConfig -> [Packet] -> ([(Packet, Action)], [LogEntry])
-runSimulation config packets = 
-    runWriter $ processAll config packets
-  where
-    processAll :: FirewallConfig -> [Packet] -> WriterMonad [(Packet, Action)]
-    processAll cfg pkts = mapM (\p -> do
+        processAll :: FirewallConfig -> [Packet] -> WriterMonad [(Packet, Action)]
+        processAll cfg pkts = mapM (\p -> do
                                         act <- processPacket cfg p
                                         return (p, act)) pkts
 
--- pasar de logs a texto.
+---------------------------
+-- funciones de formateo --
+---------------------------
+
+-- Pasar de logs a texto imprimible.
 formatLogs :: [LogEntry] -> T.Text
 formatLogs logs = T.unlines $ zipWith formatEntry ([1..] :: [Int]) logs
   where
@@ -217,6 +230,7 @@ formatLogs logs = T.unlines $ zipWith formatEntry ([1..] :: [Int]) logs
         in T.justifyRight 4 ' ' (T.pack (show n)) `T.append` ". [" 
            `T.append` levelStr `T.append` "] " `T.append` pktInfo `T.append` msg `T.append` "\n"
 
+-- Pasar de resultados a texto imprimible.
 formatResults :: [(Packet, Action)] -> T.Text
 formatResults pas = T.pack $ concatMap formatLine pas
   where

@@ -18,13 +18,14 @@ import Common
 import qualified Data.Text as T
 import Control.Monad.Except(throwError)
 
+-- Monada usada para la logica del firewall, permite loggear informacion.
 type WriterMonad a = Writer [LogEntry] a
 
 -- Funcion helper para loggueo
 logMsg' :: LogLevel -> T.Text -> Maybe Packet -> WriterMonad ()
 logMsg' level msg mpkt = tell [LogEntry level msg mpkt]
 
--- Monada para el lexer, guarda dos valores de estado: la continuacion del cómputo y el numero de linea
+-- Monada para el lexer, guarda dos valores de estado: la continuacion del computo y el numero de linea
 type P a = String -> Int -> ParseResult a
 
 -- definicion de operaciones de la monada
@@ -36,7 +37,6 @@ m `thenP` k = \s l-> case m s l of
 returnP :: a -> P a
 returnP a = \_ _-> Ok a
 
--- Operaciones adicionales de la monada (no se usaron aun)
 failP :: String -> P a
 failP err = \_ _ -> Failed err
 
@@ -51,6 +51,5 @@ mapP f (x:xs) = f x `thenP` \r ->
                 mapP f xs `thenP` \rs ->
                 returnP (r:rs)
 
--- monada para validacion del AST
--- permite llamar a IO en sus acciones monadicas, al hacer un liftIO
+-- monada para validacion del AST, permite propagar errores durante los multiples chequeos
 type ErrAST a = Either T.Text a
