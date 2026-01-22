@@ -14,9 +14,6 @@ import Monads
 %tokentype { Token }
 %lexer {lexer} {TokenEOF}
 
-
--- TODO: AGREGAR SOPORTE PARA VARIABLES
-
 %token
     device          { TokenDevice $$ }
     mac             { TokenDeviceMac }
@@ -47,7 +44,6 @@ import Monads
     IP_ADDR         { TokenIP $$ }
     '('             { TokenLParen }
     ')'             { TokenRParen }
-    '!'             { TokenNot }
     '-'             { TokenDash }
     '/'             { TokenSlash }
     network         { TokenNetwork }
@@ -65,8 +61,6 @@ import Monads
     ACCEPT          { TokenAccept }
     DROP            { TokenDrop }
     REJECT          { TokenReject }
-
-
 
 %%
 
@@ -91,7 +85,6 @@ DeviceFields : mac '=' STRING ';' ip '=' IP_ADDR ';' subnet '=' SubnetVal ';' in
         , subnetRange = $11
         , ifaces = map T.pack validIfs
         } }
-
 
 IfList : STRING { [$1] }
     | STRING ',' IfList { $1 : $3 }
@@ -141,8 +134,6 @@ ACTION : ACCEPT { Accept }
 
 SpecList : Spec { $1 }
     | SpecList Spec { AndMatch $1 $2 }
-    | '!' Spec { NotMatch $2 }
-
 
 Spec : '-' srcip IPList { conjunctIPMatches $3 MatchSrcIP }
     | '-' dstip IPList { conjunctIPMatches $3 MatchDstIP }
@@ -170,7 +161,6 @@ PortList : NUMBER { [$1] }
     | NUMBER ',' PortList { $1 : $3 }
 
 {
-
 -- obtener numero de linea del estado de la monada      
 getLineNo :: P Int
 getLineNo = \s l -> Ok l
@@ -188,7 +178,6 @@ lexer cont s = \line ->
             | c == '"'  -> lexString cont cs s line
             | isAlpha c -> lexKeywordOrIdent cont (c:cs) s line
             | otherwise -> case c of
-                '!' -> cont TokenNot cs line
                 '(' -> cont TokenLParen cs line
                 ')' -> cont TokenRParen cs line
                 '/' -> cont TokenSlash cs line

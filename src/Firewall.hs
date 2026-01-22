@@ -16,7 +16,6 @@ import qualified Net.IPv4 as IPV4
 import qualified Data.Text as T
 import Text.Printf (printf)
 import PrettyPrinter (renderMatch)
-import Data.List (find)
 
 -- Agregar un Id a cada regla de cada chain.
 addRuleIds :: Info -> Info
@@ -31,9 +30,10 @@ data FirewallConfig = FirewallConfig {
     fwDevices :: [Device]
 }
 
--- Buscar dispositivo por IP (?)
+-- Buscar dispositivo por IP 
 findDeviceByIP :: IPV4.IPv4 -> [Device] -> Maybe Device
-findDeviceByIP ip = find (\d -> ipv4Dir d == ip)
+findDeviceByIP _ [] = Nothing
+findDeviceByIP ip (d:ds) = if (ipv4Dir d) == ip then Just d else findDeviceByIP ip ds
 
 -- Determinar el target del paquete
 getPacketTarget :: Packet -> IPV4.IPv4 -> PacketTarget
@@ -49,49 +49,90 @@ getRulesForTarget target chains = case filter (\(t, _) -> t == target) chains of
                                 _ -> [] 
 
 -- Modificar interfaz de entrada al firewall, para paquetes externos a la red.
-adjustInternetPacket :: [Device] -> Packet -> Packet
-adjustInternetPacket devices pkt =
-    case findDeviceByIP (srcip pkt) devices of
-        Nothing -> pkt { ingressif = defaultInIf }  -- IP desconocida => viene de internet, convenimos usar "eth3"
+adjustPacketInIf :: [Device] -> Packet -> Packet
+adjustPacketInIf devices pkt =
+    case (findDeviceByIP (srcip pkt) devices) of
+        Nothing -> pkt { ingressif = defaultFwIf }  -- IP desconocida => viene de internet, convenimos usar "eth3"
         Just _ -> pkt  -- IP conocida => mantener interfaz original
 
--- Verificación de seguridad (con ajuste de interfaz para internet)
+adjustPacketOutIf :: [Device] -> Packet -> Packet
+adjustPacketOutIf devices pkt =
+    case (findDeviceByIP (dstip pkt) devices) of
+        Nothing -> pkt { egressif = defaultFwIf }  -- IP desconocida => viene de internet, convenimos usar "eth3"
+        Just _ -> pkt  -- IP conocida => mantener interfaz original
+
+-- Verificacion de seguridad (con ajuste de interfaz para internet)
 securityCheck :: Packet -> [Device] -> WriterMonad ()
-securityCheck p devices = 
+securityCheck p devices = do    
+    -- origen
     case findDeviceByIP (srcip p) devices of
         Nothing -> do 
-            logMsg' Warning ("Paquete proveniente de una IP desconocida (" `T.append` IPV4.encode (srcip p) `T.append` "). Se asume interfaz de entrada: "  `T.append` defaultInIf) (Just p)
-        Just device -> do
+            logMsg' Warning ("Paquete proveniente de una IP desconocida (" 
+                           `T.append` IPV4.encode (srcip p) `T.append` "). Se asume interfaz de entrada: "  
+                           `T.append` defaultFwIf) (Just p)
+        Just srcDevice -> do
             let iif = ingressif p
-            if (T.null iif) || (iif == defaultInIf) || (elem iif (interfaces device))
+            if (T.null iif) || (iif == defaultFwIf) || (elem iif (interfaces srcDevice))
                 then return ()
-                else do logMsg' Warning ("Paquete proveniente de interfaz incorrecta. (" 
-                           `T.append` iif `T.append` ")") (Just p)
+                else do logMsg' Warning ("Interfaz de entrada incorrecta para " `T.append` devName srcDevice 
+                               `T.append` ": " `T.append` ingressif p) (Just p)
 
--- El paquete, pasa por el firewall?
-shouldBeProcessedByFirewall :: Packet -> [Device] -> Bool
-shouldBeProcessedByFirewall p devices =
+    -- destino
+    case findDeviceByIP (dstip p) devices of
+        Nothing -> do
+            logMsg' Warning ("Paquete destinado a una IP desconocida (" 
+                           `T.append` IPV4.encode (dstip p) `T.append` "). Se asume interfaz de salida: "  
+                           `T.append` defaultFwIf) (Just p)
+        Just dstDevice -> do
+            let oif = egressif p
+            if (T.null oif) || (oif == defaultFwIf) || (elem oif (interfaces dstDevice))
+                then return ()
+                else do logMsg' Warning ("Interfaz de salida incorrecta para " `T.append` devName dstDevice 
+                               `T.append` ": " `T.append` egressif p) (Just p)
+
+-- Verifica si el paquete se envía desde y hacia una misma subnet (no pasa por firewall)
+isIntraSubnetPacket :: Packet -> [Device] -> Bool
+isIntraSubnetPacket p devices =
     case (findDeviceByIP (srcip p) devices, findDeviceByIP (dstip p) devices) of
-        (Just src, Just dst) -> subnet src /= subnet dst
-        _ -> True
+        (Just src, Just dst) -> subnet src == subnet dst
+        _ -> False
+
+-- Verifica si el paquete se envía desde y hacia una IP remota (no pasa por firewall)
+isExtToExtPacket :: Packet -> [Device] -> Bool
+isExtToExtPacket p devices = 
+    isNothing (findDeviceByIP (srcip p) devices) && 
+    isNothing (findDeviceByIP (dstip p) devices)
+  where
+    isNothing Nothing = True
+    isNothing (Just _) = False
 
 -- Procesar paquete con configuración explícita
 processPacket :: FirewallConfig -> Packet -> WriterMonad Action
 processPacket config p = do
     -- Primero ajustar el paquete si viene de internet
-    let adjustedPkt = adjustInternetPacket (fwDevices config) p
+    let fwConf = fwDevices config
+    let adjustedPkt = adjustPacketInIf fwConf (adjustPacketOutIf fwConf p)
     
-    if shouldBeProcessedByFirewall adjustedPkt (fwDevices config)
+    if isIntraSubnetPacket adjustedPkt fwConf
         then do
-            securityCheck adjustedPkt (fwDevices config)
-            let target = getPacketTarget adjustedPkt (fwIP config)
-                rules = getRulesForTarget target (fwRules config)
-            evalChain rules adjustedPkt
-        else do
-            logMsg' Warning ("Paquete intra-subnet (no pasa por firewall): " 
-                           `T.append` packid adjustedPkt) (Just adjustedPkt)
+            logMsg' Warning "Paquete intra-subnet (NO pasa por firewall)" (Just adjustedPkt)
             return Accept
 
+        else 
+            if isExtToExtPacket adjustedPkt fwConf
+                then do
+                    logMsg' Warning "Paquete externo detectado (NO pasa por firewall)" (Just adjustedPkt)
+                    return Accept
+                else do
+                    securityCheck adjustedPkt fwConf
+                    let target = getPacketTarget adjustedPkt (fwIP config)
+                        rules = getRulesForTarget target (fwRules config)
+                    evalChain rules adjustedPkt
+
+          
+          
+
+        
 -- Evaluar cadena de reglas
 evalChain :: [Rule] -> Packet -> WriterMonad Action
 evalChain [] _ = return Drop
@@ -123,10 +164,8 @@ eval m pkt = eval' m
     eval' (MatchSrcPort sps) = any (== srcport pkt) sps
     eval' (MatchDstPort dps) = any (== dstport pkt) dps
     eval' (AndMatch m1 m2) = (eval' m1) && (eval' m2)
-    eval' (OrMatch m1 m2) = (eval' m1) || (eval' m2)
-    eval' (NotMatch m') = not (eval' m')
 
--- Crear entorno (?)
+-- Crear estructura de informacion temporal
 buildConfig :: Info -> ErrAST FirewallConfig
 buildConfig info = do
     validatedInfo <- astValidation info

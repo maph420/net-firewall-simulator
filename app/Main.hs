@@ -107,9 +107,9 @@ handleCommand state cmd = case cmd of
                         outputStrLn $ "==========================================="
                         outputStrLn $ T.unpack res
                 
-                outputStrLn $ "==========================================="
-                outputStrLn $ "Logs extraidos:"
-                outputStrLn $ "==========================================="
+                outputStrLn $ "================="
+                outputStrLn $ "Logs extraidos"
+                outputStrLn $ "================="
                 outputStrLn $ T.unpack $ formatLogs logs
                 outputStrLn $ "----------------------------------------------------------------------------"
                 return $ state { currentConfig = Just info }

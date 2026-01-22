@@ -22,9 +22,6 @@ printMatch (MatchOutIf outif) = "out-interface =" <+> (pretty outif)
 printMatch (MatchSrcPort msp) = "source-port =" <+> (prettyList (msp :: PortList))
 printMatch (MatchDstPort mdp) = "destination-port =" <+> (prettyList (mdp :: PortList))
 printMatch (AndMatch m1 m2) = (printMatch m1) <> "," <+> (printMatch m2)
--- capaz no hacen falta
-printMatch (OrMatch m1 m2) = (printMatch m1) <+> "OR" <+> (printMatch m2)
-printMatch (NotMatch m) = "NOT" <+> (printMatch m)
 printMatch (MatchAny) = "default-policy"
 
 -- renderizar texto, de formato documento a lejible

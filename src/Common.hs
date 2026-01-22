@@ -24,7 +24,7 @@ module Common
         Token(..),
         ParseResult(..),
         DeviceFieldsData(..),
-        defaultInIf
+        defaultFwIf
     ) where
 
 import qualified Net.IPv4 as IPV4
@@ -38,8 +38,8 @@ import qualified Data.Map.Strict as M
 -- deberia fijar las interfaces? o dejarlas simplemente como texto?
 type Interface = T.Text
 
-defaultInIf :: Interface
-defaultInIf = T.pack "eth3"
+defaultFwIf :: Interface
+defaultFwIf = T.pack "eth3"
 
 data Protocol = TCP | UDP | ANY deriving (Eq, Show)
 
@@ -121,9 +121,6 @@ data Match = MatchAny
     | MatchSrcPort PortList
     | MatchDstPort PortList
     | AndMatch Match Match -- encadenar todo lo que pide 1 regla
-    | NotMatch Match
-    | OrMatch Match Match
-
     deriving (Show)
 
 
@@ -201,8 +198,6 @@ data Token
     | TokenReject
     | TokenDash
     | TokenAnd
-    | TokenOr
-    | TokenNot
     | TokenLParen
     | TokenRParen
     | TokenNetwork

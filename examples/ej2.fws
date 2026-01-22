@@ -71,6 +71,26 @@ packets {
     // DMZ quiere acceder a la lan, no! reject!
     pdmz-1 : 168.96.18.1 -> 192.168.0.1 : tcp 1111 -> 22 : from "eth1" to "wlan0"; 
 
+    // DMZ quiere acceder a algun lado del internet
+    pdmz-2 : 168.96.18.1 -> 224.112.0.9 : tcp 1112 -> 22 : from "eth1" to "ppp2"; 
+
+    // nodo LAN que quiere acceder al dns sin proxy (rechazar)
+
+    plan-1 : 192.168.0.1 -> 168.96.18.1 : udp 3333 ->53 : from "wlan0" to "eth1";
+
+    // nodo LAN que accede al dns con proxy (aceptar)
+    plan-2 : 192.168.0.1 -> 168.96.18.3 : udp 3334 -> 53 : from "wlan0" to "eth1";
+
+    // envio intralan (no pasar por firewall)
+    plan-3: 192.168.0.2 -> 192.168.0.1 : tcp 2311 -> 22 : from "eth1" to "eth1";
+
+    // envio de lan a internet (no dejar)
+    plan4 : 192.168.0.3 -> 31.11.23.12 : tcp 2444 -> 22 : from "wlan0" to "eth3";
+
+    // envio random (?) no deberia pasar x firewall tampoco
+
+    prandom : 55.34.34.1 -> 22.11.22.44 : tcp 3434 -> 22: from "ppp1" to "wlan0";
+
 
 }
 
@@ -92,8 +112,13 @@ rules {
         -srcsubnet 192.168.0.0/24 -prot any -dstp 53 -dstip 168.96.18.3 -do ACCEPT;
         -srcsubnet 192.168.0.0/24 -prot any -dstip 168.96.18.1 -do REJECT;
 
+        // el resto de los envios de la lan caen a la default policy
+
         // bloquear accesos DMZ -> LAN
         -srcsubnet 168.96.18.0/29 -dstsubnet 192.168.0.0/24 -inif "eth1" -outif "wlan0" -do REJECT;
+
+        // el resto de accesos se asumen permitidos, DMZ -> ? (obs que no nateamos)
+        -srcsubnet 168.96.18.0/29 -inif "eth1" -do ACCEPT;
 
         // admitir accesos DNS/WEB/SMTP desde el exterior
         -dstip 168.96.18.1 -outif "eth1" -inif "eth3" -dstp 53 -prot any -do ACCEPT; // dns 
