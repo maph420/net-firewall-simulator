@@ -82,9 +82,7 @@ Donde los campos corresponden a:
 - Entre `""`, la interfaz por la cual el paquete **sale** del firewall. Si el paquete es destinado al firewall, se puede ignorar el campo dejandolo vacío (`""`).
 
 > [!NOTE]
-> Por fines didácticos del firewall, si un paquete proviene del internet (fuera de la red que protege el firewall), 
-> se usará como **interfaz de entrada** la que vincula el firewall con el enrutador, que convenimos que es **eth3**. 
-> La que se suministre en la sintaxis del paquete se ignorará.
+> Por fines didácticos del firewall, si un paquete proviene del internet (fuera de la red que protege el firewall), se usará como **interfaz de entrada** la que vincula el firewall con el enrutador, que convenimos que es **eth3**.  La que se suministre en la sintaxis del paquete se ignorará. Lo mismo ocurrirá con paquetes que vayan por fuera de la red: la **interfaz de salida** del firewall se forzará a ser **eth3**.
 
 ### Sección rules
 
@@ -106,9 +104,12 @@ rules {
 
 El órden de definición de las cadenas es arbitrario, no debe ser necesariamente el mismo que el exhibido. En cuanto a las reglas, cada regla se separa por un semicolon (`;`) y consiste en una sucesión de condiciones separadas por espacios (de la forma `-condicion ...`) terminadas por un `-do ACCION`, que especifica la acción a tomar sobre el paquete. Las acciones tomables sobre un paquete son:
 
-- Aceptarlo (ACCEPT)
-- Rechazarlo, avisando al remitente (REJECT)
-- Rechazarlo, descartándolo "silenciosamente" (DROP)
+- Aceptarlo (**ACCEPT**)
+- Rechazarlo, avisando al remitente (**REJECT**)
+- Rechazarlo, descartándolo "silenciosamente" (**DROP**)
+
+> [!NOTE]
+> La diferencia entre **DROP** y **REJECT** es simbolica en este simulador (realmente, un **REJECT** le avisa al remitente que hubo un problema, pero acá no se cubre ese comportamiento)
 
 Las condiciones que se pueden imponer para cada regla son:
 
@@ -155,55 +156,55 @@ Para aclarar todo lo antes mencionado, mostramos un ejemplo de archivo en `test.
 
 ```
 // test.fws
-network {
 
+network {
+    
     device servidor-web {
         mac = "AA:BB:CC:DD:EE:FF";
         ip = 192.168.1.10;         
         subnet = 192.168.1.0/24;   
         interfaces = "ppp0";
     }
-
+                 
     device pc-lab {
         mac = "DD:EE:FF:11:22:33";
-        ip = 192.168.9.1;          
-        subnet = 192.168.9.0/16;   
+        ip = 192.168.0.111;          
+        subnet = 192.168.0.0/24;   
         interfaces = "ppp0", "wlan0", "wlan1";
     }
 
-     // se debe definir de manera obligatoria.
-     device firewall {
+    // se debe definir de manera obligatoria, y con ip publica
+    device firewall {
         mac = "00:11:22:33:44:55";
-        ip = 192.168.1.1;         
-        subnet = 192.168.1.0/24;   
+        ip = 211.168.1.1;         
+        subnet = 211.168.1.0/16;   
         interfaces = "eth0", "eth1";
     }
 }
 
 packets {
-    p1 : 192.168.1.222 -> 192.168.1.1 : tcp 57890 -> 22: from "ppp0" to "";
-    p2 : 192.168.9.1 -> 192.168.1.10 : tcp 12121 -> 80 : from "wlan0" to "wlan1";
-    p3 : 192.168.1.1 -> 8.8.8.8 : udp 22222 -> 53 : from "" to "eth1";
-    p4 : 192.168.1.10 -> 192.168.9.1 : udp 56737 -> 67 : from "ppp0" to "eth2";
+    p1 : 192.168.0.111-> 211.168.1.1 : tcp 57890 -> 22: from "wlan1" to "";
+    p2 : 192.168.0.111 -> 192.168.1.10 : tcp 12121 -> 80 : from "wlan0" to "ppp0";
+    p3 : 211.168.1.1 -> 8.8.8.8 : udp 22222 -> 53 : from "" to "eth1";
+    p4 : 192.168.1.10 -> 192.168.0.111 : udp 56737 -> 67 : from "ppp0" to "wlan1";
 }
 
 rules {
     chain INPUT {
-        -srcip 192.168.1.1, 10.0.1.2 -do ACCEPT;
-        -dstip 10.0.0.1, 10.0.1.2 -dstp 80 -do DROP;
-        -srcsubnet 192.168.1.0/24, 10.0.0.1/16 -do REJECT;
-        -default DROP;
+        -srcip 192.168.1.1 -do ACCEPT;
+        -dstip 10.0.0.1 -dstp 80 -do DROP;
+        -srcsubnet 192.168.1.0/24 -do REJECT;
     }
     chain FORWARD {
-        -prot udp -dstp 53 -outif "eth0" -do ACCEPT ;
-        -prot tcp -dstp 80,443,53,22 -inif "eth1","wlan1" -do ACCEPT ;
+        -prot tcp -dstp 80,443 -do ACCEPT;
+        -prot udp -dstp 53 -do ACCEPT;
+        -default DROP;
     }
     chain OUTPUT {
-        -dstip 8.8.8.8, 1.1.1.1 -do DROP;
+        -dstip 8.8.8.8 -do DROP;
         -default ACCEPT;
     }
-
-} 
+}
 
 ```
 
@@ -215,15 +216,15 @@ rules {
 
 El proyecto corre sobre **stack**, una herramienta que permite gestionar proyectos en **Haskell**.
 
-Para debian/ubuntu:
+Para conseguirla en debian/ubuntu:
 
 > sudo apt-get install stack
 
-Para correr el proyecto, basta con navegar hasta el directorio `net-firewall-simulator` y correr:
+Para correr el proyecto, basta con navegar hasta el directorio del proyecto (`net-firewall-simulator`) y correr:
 
 > stack run
 
-Lo cual lleva a una consola de comandos interactiva.
+El cual empezará a instalar todas las dependencias que fueran necesarias antes de correr el proyecto.
 
 (completar)
 
@@ -231,4 +232,3 @@ Lo cual lleva a una consola de comandos interactiva.
 [^1]: Lo interesante será cuando dos nodos de subredes distintas se comuniquen. Convenimos que el firewall acepta automáticamente los paquetes de tráfico local (un firewall no simulado, directamente ni vería los paquetes porque no pasan por él)
 
 [^2]: Para más información, consultar el man page de iptables (`man iptables`) o [iptables-tutorial](https://www.frozentux.net/iptables-tutorial/iptables-tutorial.html#INPUTCHAIN)
-

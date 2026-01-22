@@ -1,11 +1,7 @@
-network {
-    device firewall {
-        mac = "00:11:22:33:44:55";
-        ip = 192.168.1.1;         
-        subnet = 192.168.1.0/24;   
-        interfaces = "eth0", "eth1";
-    }
+// test.fws
 
+network {
+    
     device servidor-web {
         mac = "AA:BB:CC:DD:EE:FF";
         ip = 192.168.1.10;         
@@ -13,24 +9,27 @@ network {
         interfaces = "ppp0";
     }
                  
-    
-    // comentario
-    // ooo
     device pc-lab {
         mac = "DD:EE:FF:11:22:33";
-        ip = 192.168.0.0222;          
-        subnet = 192.162.9.0/32;   
+        ip = 192.168.0.111;          
+        subnet = 192.168.0.0/24;   
         interfaces = "ppp0", "wlan0", "wlan1";
+    }
+
+    // se debe definir de manera obligatoria, y con ip publica
+    device firewall {
+        mac = "00:11:22:33:44:55";
+        ip = 211.168.1.1;         
+        subnet = 211.168.1.0/16;   
+        interfaces = "eth0", "eth1";
     }
 }
 
 packets {
-    p1 : 192.168.1.10 -> 192.168.1.1 : tcp 111 -> 22 : from "ppp0" to "ppp1";
-    p2 : 192.168.9.1 -> 192.168.1.10 : tcp 233 -> 80 : from "wlan1" to "wlan0";
-    p3 : 192.168.1.1 -> 8.8.8.8 : udp 222 -> 53 : from "eth1" to "eth1";
-        p5 : 202.22.1.0 -> 192.168.9.1 : tcp 12121-> 22 : from "eth0" to "eth0";
-    paquete-sus: 192.168.1.10 -> 192.168.9.1 : udp 65531 -> 67 : from "wlan4" to "wlan3";
-    p4 : 192.168.1.10 -> 192.168.9.1 : udp 44423-> 67 : from "ppp0" to "ppp1";
+    p1 : 192.168.0.111-> 211.168.1.1 : tcp 57890 -> 22: from "wlan1" to "";
+    p2 : 192.168.0.111 -> 192.168.1.10 : tcp 12121 -> 80 : from "wlan0" to "ppp0";
+    p3 : 211.168.1.1 -> 8.8.8.8 : udp 22222 -> 53 : from "" to "eth1";
+    p4 : 192.168.1.10 -> 192.168.0.111 : udp 56737 -> 67 : from "ppp0" to "wlan1";
 }
 
 rules {
@@ -42,42 +41,10 @@ rules {
     chain FORWARD {
         -prot tcp -dstp 80,443 -do ACCEPT;
         -prot udp -dstp 53 -do ACCEPT;
+        -default DROP;
     }
     chain OUTPUT {
         -dstip 8.8.8.8 -do DROP;
+        -default ACCEPT;
     }
 }
-
-
-
-
-Info {
-    
-    
-    infoNetwork = [Device {devName = "pc0", macDir = "AA:BB:CC:DD:EE:FF", ipv4Dir = ipv4 10 0 1 23, subnet = IPv4Range {ipv4RangeBase = ipv4 10 0 1 0, ipv4RangeLength = 24}, interfaces = ["wlan1"]},
-    Device {devName = "pc1", macDir = "AA:BB:CC:DD:EF:FF", ipv4Dir = ipv4 10 0 1 25, subnet = IPv4Range {ipv4RangeBase = ipv4 10 0 1 0, ipv4RangeLength = 24}, interfaces = ["wlan1"]},
-    Device {devName = "pc2", macDir = "AA:BB:CC:DD:01:FF", ipv4Dir = ipv4 10 0 1 27, subnet = IPv4Range {ipv4RangeBase = ipv4 10 0 1 0, ipv4RangeLength = 24}, interfaces = ["wlan1"]},
-    Device {devName = "db", macDir = "AA:BB:CC:CA:FE:FF", ipv4Dir = ipv4 10 0 2 30, subnet = IPv4Range {ipv4RangeBase = ipv4 10 0 2 0, ipv4RangeLength = 24}, interfaces = ["eth0"]},
-    Device {devName = "backup", macDir = "AA:BB:CC:CA:FF:FF", ipv4Dir = ipv4 10 0 2 31, subnet = IPv4Range {ipv4RangeBase = ipv4 10 0 2 0, ipv4RangeLength = 24}, interfaces = ["eth0"]},
-    Device {devName = "sv1", macDir = "AA:BB:CC:CB:FF:FF", ipv4Dir = ipv4 181 16 1 17, subnet = IPv4Range {ipv4RangeBase = ipv4 181 16 1 16, ipv4RangeLength = 28}, interfaces = ["eth1"]},
-    Device {devName = "sv2", macDir = "AA:BB:CC:CC:FF:FF", ipv4Dir = ipv4 181 16 1 22, subnet = IPv4Range {ipv4RangeBase = ipv4 181 16 1 16, ipv4RangeLength = 28}, interfaces = ["eth1"]},
-    Device {devName = "sv3", macDir = "AA:BB:CC:CD:FF:FF", ipv4Dir = ipv4 181 16 1 24, subnet = IPv4Range {ipv4RangeBase = ipv4 181 16 1 16, ipv4RangeLength = 28}, interfaces = ["eth1"]},
-    Device {devName = "firewall", macDir = "AA:BB:CC:CE:FF:FF", ipv4Dir = ipv4 200 3 1 2, subnet = IPv4Range {ipv4RangeBase = ipv4 200 3 1 0, ipv4RangeLength = 24}, interfaces = ["eth1"]}], 
-    
-    infoPackets = [Packet {packid = "p-ext1", srcip = ipv4 211 0 0 12, dstip = ipv4 181 16 1 22, srcport = 2233, dstport = 22, protocol = TCP, ingressif = "eth1", egressif = "eth1"},
-    Packet {packid = "p-ext2", srcip = ipv4 211 0 0 14, dstip = ipv4 181 16 1 17, srcport = 53444, dstport = 22, protocol = TCP, ingressif = "eth1", egressif = "wlan1"}], 
-    
-    
-    
-    infoRules = fromList [
-        (Forward,[Rule {ruleId = "rule", ruleMatch = AndMatch (AndMatch (AndMatch (MatchSrcSubnet (IPv4Range {ipv4RangeBase = ipv4 10 0 1 0, ipv4RangeLength = 24})) (MatchInIf "wlan1")) (MatchOutIf "eth0")) (MatchDstSubnet (IPv4Range {ipv4RangeBase = ipv4 10 0 2 0, ipv4RangeLength = 24})), ruleAction = Drop, ruleLog = Nothing},
-        Rule {ruleId = "rule", ruleMatch = MatchSrcSubnet (IPv4Range {ipv4RangeBase = ipv4 10 0 1 0, ipv4RangeLength = 24}), ruleAction = Accept, ruleLog = Nothing},
-        Rule {ruleId = "rule", ruleMatch = AndMatch (AndMatch (AndMatch (MatchOutIf "eth1") (MatchDstIP (ipv4 181 16 1 17))) (MatchProt TCP)) (MatchDstPort [80,44,53]), ruleAction = Accept, ruleLog = Nothing},
-        Rule {ruleId = "rule", ruleMatch = AndMatch (AndMatch (AndMatch (MatchOutIf "eth1") (MatchDstIP (ipv4 181 16 1 22))) (MatchProt TCP)) (MatchDstPort [22]), ruleAction = Accept, ruleLog = Nothing},
-        Rule {ruleId = "rule", ruleMatch = AndMatch (AndMatch (AndMatch (MatchOutIf "eth1") (MatchDstIP (ipv4 181 16 1 24))) (MatchProt TCP)) (MatchDstPort [103,143]), ruleAction = Accept, ruleLog = Nothing},
-        Rule {ruleId = "default", ruleMatch = MatchAny, ruleAction = Drop, ruleLog = Nothing}]),
-        
-        (Input, reglas....),
-
-        (Output, reglas....)
-        ]}
