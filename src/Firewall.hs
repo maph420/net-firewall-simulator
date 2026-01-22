@@ -117,7 +117,7 @@ eval m pkt = eval' m
     eval' (MatchDstIP mdip) = mdip == (dstip pkt)
     eval' (MatchSrcSubnet mss) = IPV4.contains mss (srcip pkt)
     eval' (MatchDstSubnet mds) = IPV4.contains mds (dstip pkt)
-    eval' (MatchProt prot) = prot == (protocol pkt)
+    eval' (MatchProt prot) = if (prot == ANY) then True else prot == (protocol pkt)
     eval' (MatchInIf mii) = mii == (ingressif pkt) 
     eval' (MatchOutIf moi) = moi == (egressif pkt)
     eval' (MatchSrcPort sps) = any (== srcport pkt) sps

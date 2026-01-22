@@ -43,8 +43,8 @@ network {
     }
 
     device proxySV {
-        mac = "AA:BB:CF:CB:FF:FF";
-        ip = 168.96.18.2;
+        mac = "AA:BB:CC:CC:FF:FF";
+        ip = 168.96.18.3;
         subnet = 168.96.18.0/29;
         interfaces = "eth1";
     }
@@ -59,11 +59,18 @@ network {
 }
 
 packets {
-    // una ip desconocida quiere acceder al ssh de la DMZ -> permitir
-    p-ext1 : 211.0.0.12 -> 181.16.1.22 : tcp 2233 -> 22 : from "eth1" to "eth1";
+    // una ip desconocida quiere acceder al servicio de dns. aceptar
+    p-ext1 : 211.0.0.12 -> 168.96.18.1 : tcp 53120 -> 53 : from "ppp0" to "eth1";
 
-    // una ip desconocida quiere acceder a ssh del server dns! no permitir.
-    p-ext2 : 211.0.0.14 -> 181.16.1.17 : tcp 53444 ->22 : from "eth1" to "wlan1";
+    // la misma quiere acceder ahora a servicios web. aceptar
+     p-ext2 : 211.0.0.12 -> 168.96.18.1 : tcp 53121 -> 443 : from "ppp0" to "eth1";
+
+    // la misma quiere acceder ahora a servicios de mail. por default-policy. droppear
+     p-ext3 : 211.0.0.12 -> 168.96.18.1 : tcp 53122 -> 995 : from "ppp0" to "eth1";
+
+    // DMZ quiere acceder a la lan, no! reject!
+    pdmz-1 : 168.96.18.1 -> 192.168.0.1 : tcp 1111 -> 22 : from "eth1" to "wlan0"; 
+
 
 }
 
@@ -79,10 +86,24 @@ rules {
     // correspondientes.
 
     chain FORWARD {
-        -srcsubnet 192.168.0.0/24 -prot tcp -dstp 53,25,587,465,995,80,443 -dstip 168.96.18.1 -do ACCEPT;
-        -srcsubnet 192.168.0.0/24 -prot udp -dstp 53 -dstip 168.96.18.1 -do ACCEPT;
-        -srcsubnet 192.168.0.0/24 -prot any -dstp 53 -do REJECT;
+        // reglas LAN
+        -srcsubnet 192.168.0.0/24 -prot tcp -dstp 25,587,465,995 -dstip 168.96.18.1 -do ACCEPT;
+        -srcsubnet 192.168.0.0/24 -prot tcp -dstp 80,443 -dstip 168.96.18.3 -do ACCEPT;
+        -srcsubnet 192.168.0.0/24 -prot any -dstp 53 -dstip 168.96.18.3 -do ACCEPT;
+        -srcsubnet 192.168.0.0/24 -prot any -dstip 168.96.18.1 -do REJECT;
+
+        // bloquear accesos DMZ -> LAN
+        -srcsubnet 168.96.18.0/29 -dstsubnet 192.168.0.0/24 -inif "eth1" -outif "wlan0" -do REJECT;
+
+        // admitir accesos DNS/WEB/SMTP desde el exterior
+        -dstip 168.96.18.1 -outif "eth1" -inif "eth3" -dstp 53 -prot any -do ACCEPT; // dns 
+        -dstip 168.96.18.1 -outif "eth1" -inif "eth3" -dstp 80, 443 -prot tcp -do ACCEPT; // http, https
+        -dstip 168.96.18.2 -outif "eth1" -inif "eth3" -dstp 25 -prot tcp -do ACCEPT ;// smtp
+        -default DROP;
+    
     }
+
+
 }
 
 
