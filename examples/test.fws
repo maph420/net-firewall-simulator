@@ -10,7 +10,7 @@ network {
     }
                  
     device pc-lab {
-        mac = "DD:EE:FF:11:22:33";
+        mac = "00:11:CA:FE:CA:FE";
         ip = 192.168.0.111;          
         subnet = 192.168.0.0/24;   
         interfaces = "ppp0", "wlan0", "wlan1";
@@ -18,7 +18,7 @@ network {
 
     // se debe definir de manera obligatoria, y con ip publica
     device firewall {
-        mac = "00:11:22:33:44:55";
+        mac = "00:22:CA:FE:CA:FE";
         ip = 211.168.1.1;         
         subnet = 211.168.1.0/16;   
         interfaces = "eth0", "eth1";

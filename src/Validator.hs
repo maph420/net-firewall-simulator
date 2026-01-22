@@ -29,7 +29,7 @@ astValidation inf = do
 
                         checkForIdentifiers network macDir (\md -> "la direccion MAC '" `T.append` md `T.append` "' aparece repetida\n")
 
-                        checkForIdentifiers network ipv4Dir (\ipdir -> "la direccion IPv4 '" `T.append` (IPV4.encode ipdir) `T.append` "' aparece repetida.\n")
+                        checkForIPIdentif network (\ipdir -> "la direccion IPv4 '" `T.append` (IPV4.encode ipdir) `T.append` "' aparece repetida.\n")
 
                         -- verificar que ninguna regla de la cadena INPUT tenga una restriccion '-outif'
                         -- ídem OUTPUT no tenga ninguna restriccion '-inif'
@@ -57,15 +57,27 @@ checkDevice d = if (subnet d) `IPV4.contains` (ipv4Dir d)
                     then return ()
                     else throwError $ "la ip " `T.append` (encode (ipv4Dir d)) `T.append` " no pertenece al rango subnet: " `T.append` (encodeRange (subnet d)) `T.append` "\n"
 
-checkForIdentifiers :: Ord k => [a] -> (a -> k) -> (k -> T.Text) -> ErrAST ()
+-- Verifica si un identificador dado aparece repetido en la lista pasada. Se pasa el extractor de campo para saber por cuál del registro se quiere chequear.
+-- Si hay repeticion, llama a una funcion que formatea el error.
+checkForIdentifiers :: [a] -> (a -> T.Text) -> (T.Text -> T.Text) -> ErrAST ()
 checkForIdentifiers xs fieldExtr formatErr = checkForIdentifiers' xs S.empty
   where
-    checkForIdentifiers' [] _ = return ()
-    checkForIdentifiers' (y:ys) acc = do
-                                        let identif = fieldExtr y 
+        checkForIdentifiers' [] _ = return ()
+        checkForIdentifiers' (y:ys) acc = do
+                                        let identif = T.toLower $ fieldExtr y 
                                         if S.member identif acc
                                             then throwError $ formatErr identif
                                             else checkForIdentifiers' ys (S.insert identif acc)
+
+checkForIPIdentif :: Network -> (IPV4.IPv4 -> T.Text) -> ErrAST ()
+checkForIPIdentif net formatErr = checkForIPIdentif' net S.empty
+    where
+        checkForIPIdentif' [] _ = return ()
+        checkForIPIdentif' (x:xs) acc = do
+                                    let currip = ipv4Dir x
+                                    if S.member currip acc
+                                        then throwError $ formatErr currip
+                                        else checkForIPIdentif' xs (S.insert currip acc)
 
 checkFirewall :: Network -> ErrAST ()
 checkFirewall [] = throwError $ "no se reconoce ningún dispostivo llamado 'firewall', abortando\n"

@@ -175,7 +175,7 @@ network {
 
     // se debe definir de manera obligatoria, y con ip publica
     device firewall {
-        mac = "00:11:22:33:44:55";
+        mac = "00:11:CA:FE:CA:FE";
         ip = 211.168.1.1;         
         subnet = 211.168.1.0/16;   
         interfaces = "eth0", "eth1";
