@@ -23,7 +23,8 @@ module Common
         LogEntry(..),
         Token(..),
         ParseResult(..),
-        DeviceFieldsData(..)
+        DeviceFieldsData(..),
+        defaultInIf
     ) where
 
 import qualified Net.IPv4 as IPV4
@@ -36,6 +37,9 @@ import qualified Data.Map.Strict as M
 
 -- deberia fijar las interfaces? o dejarlas simplemente como texto?
 type Interface = T.Text
+
+defaultInIf :: Interface
+defaultInIf = T.pack "eth3"
 
 data Protocol = TCP | UDP | ANY deriving (Eq, Show)
 

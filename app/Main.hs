@@ -39,16 +39,18 @@ firewallText =
   \| | | | | |  __/\\ V  V / (_| | | |\n\
   \|_| |_|_|  \\___| \\_/\\_/ \\__,_|_|_|"
 
-fwLogo :: String
-fwLogo = ""
+simulatorText :: String
+simulatorText = "\tSimulator"
+
+currVersionText :: String
+currVersionText = "1.0"
 
 -- Main REPL
 main :: IO ()
 main = do
-    putStrLn fwLogo
-    putStrLn "=========================================="
-    putStrLn firewallText
-    putStrLn "=========================================="
+    putStrLn "======================================================="
+    putStrLn $ firewallText ++ simulatorText ++ " v" ++ currVersionText
+    putStrLn "=======================================================\n"
     putStrLn "Escribir :help o :? para ver los comandos disponibles."
     putStrLn ""
     runInputT defaultSettings (shellLoop initialState)
@@ -84,7 +86,7 @@ parseCommand input
 -- Handle commands
 handleCommand :: ShellState -> Command -> InputT IO ShellState
 handleCommand state cmd = case cmd of
-    Load filename -> do
+    Load filename -> do 
         liftIO $ putStrLn $ "Cargando archivo: " ++ filename
         result <- liftIO $ parseAndLoad filename
         case result of
@@ -93,14 +95,23 @@ handleCommand state cmd = case cmd of
                 return state
             Right info -> do
                 outputStrLn "Configuracion cargada..."
+                outputStrLn $ "----------------------------------------------------------------------------"
                 let (resols, logs) = runFirewallSimulation info
                 --outputStrLn $ Prelude.show info
                 let res = formatResults resols
                 if (T.null res)
                     then outputStrLn $ "Sin decisiones tomadas.\n"
                     else do
-                        outputStrLn $ "Decisiones tomadas sobre cada paquete: \n" ++ (T.unpack res)
-                outputStrLn $ "Logs extraidos: \n" ++ (T.unpack (formatLogs logs))
+                        outputStrLn $ "==========================================="
+                        outputStrLn $ "Decisiones tomadas sobre cada paquete:"
+                        outputStrLn $ "==========================================="
+                        outputStrLn $ T.unpack res
+                
+                outputStrLn $ "==========================================="
+                outputStrLn $ "Logs extraidos:"
+                outputStrLn $ "==========================================="
+                outputStrLn $ T.unpack $ formatLogs logs
+                outputStrLn $ "----------------------------------------------------------------------------"
                 return $ state { currentConfig = Just info }
     
     Quit -> do
@@ -113,10 +124,11 @@ handleCommand state cmd = case cmd of
         outputStrLn "  :quit               Salir del simulador"
         outputStrLn "  :help, :?           Mostrar ayuda"
         outputStrLn ""
-        outputStrLn "(O sus abreviaciones: :l, :q, :h)"
+        outputStrLn "Tambien se pueden usar las abreviaciones :l, :q, :h"
         outputStrLn ""
         outputStrLn "Ejemplo:"
         outputStrLn $ "  :load " ++ exampleFile 
+        outputStrLn $ "  :l " ++ exampleFile 
         outputStrLn ""
         return state
     

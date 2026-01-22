@@ -14,11 +14,9 @@ module Monads
 where
 
 import Control.Monad.Writer.Strict (Writer, tell)
-import Control.Monad.Reader (ReaderT, lift)
 import Common
 import qualified Data.Text as T
-import Control.Monad.Except(throwError, ExceptT)
-
+import Control.Monad.Except(throwError)
 
 type WriterMonad a = Writer [LogEntry] a
 

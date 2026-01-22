@@ -52,7 +52,7 @@ getRulesForTarget target chains = case filter (\(t, _) -> t == target) chains of
 adjustInternetPacket :: [Device] -> Packet -> Packet
 adjustInternetPacket devices pkt =
     case findDeviceByIP (srcip pkt) devices of
-        Nothing -> pkt { ingressif = "eth3" }  -- IP desconocida => viene de internet, convenimos usar "eth3"
+        Nothing -> pkt { ingressif = defaultInIf }  -- IP desconocida => viene de internet, convenimos usar "eth3"
         Just _ -> pkt  -- IP conocida => mantener interfaz original
 
 -- Verificación de seguridad (con ajuste de interfaz para internet)
@@ -60,13 +60,13 @@ securityCheck :: Packet -> [Device] -> WriterMonad ()
 securityCheck p devices = 
     case findDeviceByIP (srcip p) devices of
         Nothing -> do 
-            logMsg' Warning ("Paquete proveniente de una IP desconocida. Se asume interfaz de entrada eth3. (" 
-                           `T.append` IPV4.encode (srcip p) `T.append` ")") (Just p)
+            logMsg' Warning ("Paquete proveniente de una IP desconocida (" `T.append` IPV4.encode (srcip p) `T.append` "). Se asume interfaz de entrada: "  `T.append` defaultInIf) (Just p)
         Just device -> do
-            if (T.null (ingressif p)) || (elem (ingressif p) (interfaces device))
+            let iif = ingressif p
+            if (T.null iif) || (iif == defaultInIf) || (elem iif (interfaces device))
                 then return ()
                 else do logMsg' Warning ("Paquete proveniente de interfaz incorrecta. (" 
-                           `T.append` ingressif p `T.append` ")") (Just p)
+                           `T.append` iif `T.append` ")") (Just p)
 
 -- El paquete, pasa por el firewall?
 shouldBeProcessedByFirewall :: Packet -> [Device] -> Bool

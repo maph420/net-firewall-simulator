@@ -1,0 +1,88 @@
+// Ejemplo 1
+
+
+network {
+
+    // LAN de clientes
+
+    device pc0 {
+        mac = "AA:BB:CC:DD:EE:FF";
+        ip = 192.168.0.1;
+        subnet = 192.168.0.0/24;
+        interfaces = "wlan0";
+    }
+
+    device pc1 {
+        mac = "AA:BB:CC:DD:EF:FF";
+        ip = 192.168.0.2;
+        subnet = 192.168.0.0/24;
+        interfaces = "wlan0";
+    }
+
+     device pc2{
+        mac = "AA:BB:CC:DD:01:FF";
+        ip = 192.168.0.3;
+        subnet = 192.168.0.0/24;
+        interfaces = "wlan0";
+    }
+
+    // Red de servidores
+
+    device dnswwwSV {
+        mac = "AA:BB:CC:CA:FE:FF";
+        ip = 168.96.18.1;
+        subnet = 168.96.18.0/29;
+        interfaces = "eth1";
+    }
+
+    device mailSV {
+        mac = "AA:BB:CC:CB:FF:FF";
+        ip = 168.96.18.2;
+        subnet = 168.96.18.0/29;
+        interfaces = "eth1";
+    }
+
+    device proxySV {
+        mac = "AA:BB:CF:CB:FF:FF";
+        ip = 168.96.18.2;
+        subnet = 168.96.18.0/29;
+        interfaces = "eth1";
+    }
+
+    // Firewall (clave para que ande el simulador)
+    device firewall {
+        mac = "AA:BB:CC:CE:FF:FF";
+        ip = 45.231.2.17;
+        subnet = 45.231.2.0/8;
+        interfaces = "eth1", "wlan0", "eth3";
+    }
+}
+
+packets {
+    // una ip desconocida quiere acceder al ssh de la DMZ -> permitir
+    p-ext1 : 211.0.0.12 -> 181.16.1.22 : tcp 2233 -> 22 : from "eth1" to "eth1";
+
+    // una ip desconocida quiere acceder a ssh del server dns! no permitir.
+    p-ext2 : 211.0.0.14 -> 181.16.1.17 : tcp 53444 ->22 : from "eth1" to "wlan1";
+
+}
+
+rules {
+
+    // Los clientes de la LAN: 
+    // Solo pueden consultar DNS (TCP/UDP 53) a los servidores de la DMZ, no a los de Internet
+    // Solo pueden acceder a los puertos necesarios de los servidores de la DMZ (SMTP, MAPs, POPs, WEB, DNS) y nada mas
+
+    //  Los servidores de la DMZ tienen acceso total a Internet pero no a la LAN
+
+    // Desde el exterior, se puede acceder los servicios DNS, WEB y al servicio SMTP de transferencia (solo TCP 25) de los servidores
+    // correspondientes.
+
+    chain FORWARD {
+        -srcsubnet 192.168.0.0/24 -prot tcp -dstp 53,25,587,465,995,80,443 -dstip 168.96.18.1 -do ACCEPT;
+        -srcsubnet 192.168.0.0/24 -prot udp -dstp 53 -dstip 168.96.18.1 -do ACCEPT;
+        -srcsubnet 192.168.0.0/24 -prot any -dstp 53 -do REJECT;
+    }
+}
+
+

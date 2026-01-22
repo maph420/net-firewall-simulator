@@ -7,8 +7,8 @@ network {
 
     device pc0 {
         mac = "AA:BB:CC:DD:EE:FF";
-        ip = 10.0.1.23;
-        subnet = 10.0.1.0/24;
+        ip = 200.3.1.2;
+        subnet = 200.3.1.0/8;
         interfaces = "wlan1";
     }
 
