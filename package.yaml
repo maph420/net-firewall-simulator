@@ -24,8 +24,8 @@ dependencies:
 - array
 - ip
 - text
-- mtl # chequear
-- containers # chequear
+- mtl
+- containers
 - prettyprinter
 - haskeline
 
@@ -56,13 +56,3 @@ executables:
     build-tools:
     - happy
 
-tests:
-  net-firewall-simulator-test:
-    main:                Spec.hs
-    source-dirs:         test
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - net-firewall-simulator

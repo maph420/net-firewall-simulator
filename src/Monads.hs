@@ -26,6 +26,7 @@ logMsg' :: LogLevel -> T.Text -> Maybe Packet -> WriterMonad ()
 logMsg' level msg mpkt = tell [LogEntry level msg mpkt]
 
 -- Monada para el lexer, guarda dos valores de estado: la continuacion del computo y el numero de linea
+-- maneja errores: retorna o bien el dato o una string de error
 type P a = String -> Int -> ParseResult a
 
 -- definicion de operaciones de la monada

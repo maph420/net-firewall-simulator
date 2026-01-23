@@ -116,7 +116,8 @@ Stmts : {- empty -} { [] }
 Stmt : Rule ';' { $1 }
     | DefaultPolicy { $1 }
 
-DefaultPolicy : '-' default ACTION ';' { Rule (T.pack "default") MatchAny $3 Nothing }
+-- El identificador de regla se agrega en el AST
+DefaultPolicy : '-' default ACTION ';' { Rule (T.pack "") MatchAny $3 Nothing }
 
 CHAIN_NAME : INPUT  { Input }
     | OUTPUT { Output }

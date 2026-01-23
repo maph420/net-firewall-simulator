@@ -124,7 +124,8 @@ rules {
         -dstip 168.96.18.1 -outif "eth1" -inif "eth3" -dstp 53 -prot any -do ACCEPT; // dns 
         -dstip 168.96.18.1 -outif "eth1" -inif "eth3" -dstp 80, 443 -prot tcp -do ACCEPT; // http, https
         -dstip 168.96.18.2 -outif "eth1" -inif "eth3" -dstp 25 -prot tcp -do ACCEPT ;// smtp
-        -default DROP;
+        
+        -default ACCEPT;
     
     }
 

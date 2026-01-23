@@ -212,7 +212,7 @@ rules {
 > Lo unico que debería ser tratado como una cadena de caracteres (es decir, encerrado entre `""`) son las direcciones MAC y las interfaces de red.
 
 
-## Instalacion
+## Instalación
 
 El proyecto corre sobre **stack**, una herramienta que permite gestionar proyectos en **Haskell**.
 
