@@ -220,14 +220,19 @@ Para conseguirla en debian/ubuntu:
 
 > sudo apt-get install stack
 
-Para correr el proyecto, basta con navegar hasta el directorio del proyecto (`net-firewall-simulator`) y correr:
+También se puede optar por instalarlo manualmente mediante un script:
+
+> curl -sSL https://get.haskellstack.org/ | sh
+
+Para compilar el proyecto, basta con navegar hasta el directorio del proyecto (`net-firewall-simulator`) y correr:
+
+> stack build
+
+El cual además empezará a instalar todas las dependencias que fueran necesarias (puede tardar un rato)
+
+Luego, para correr el programa:
 
 > stack run
-
-El cual empezará a instalar todas las dependencias que fueran necesarias antes de correr el proyecto.
-
-(completar)
-
 
 [^1]: Lo interesante será cuando dos nodos de subredes distintas se comuniquen. Convenimos que el firewall acepta automáticamente los paquetes de tráfico local (un firewall no simulado, directamente ni vería los paquetes porque no pasan por él)
 
