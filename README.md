@@ -167,15 +167,15 @@ network {
     }
                  
     device pc-lab {
-        mac = "DD:EE:FF:11:22:33";
+        mac = "00:11:CA:FE:CA:FE";
         ip = 192.168.0.111;          
         subnet = 192.168.0.0/24;   
-        interfaces = "ppp0", "wlan0", "wlan1";
+        interfaces = "wlan1";
     }
 
     // se debe definir de manera obligatoria, y con ip publica
     device firewall {
-        mac = "00:11:CA:FE:CA:FE";
+        mac = "00:22:CA:FE:CA:FE";
         ip = 211.168.1.1;         
         subnet = 211.168.1.0/16;   
         interfaces = "eth0", "eth1";
@@ -184,7 +184,7 @@ network {
 
 packets {
     p1 : 192.168.0.111-> 211.168.1.1 : tcp 57890 -> 22: from "wlan1" to "";
-    p2 : 192.168.0.111 -> 192.168.1.10 : tcp 12121 -> 80 : from "wlan0" to "ppp0";
+    p2 : 192.168.0.111 -> 192.168.1.10 : tcp 12121 -> 80 : from "wlan1" to "ppp0";
     p3 : 211.168.1.1 -> 8.8.8.8 : udp 22222 -> 53 : from "" to "eth1";
     p4 : 192.168.1.10 -> 192.168.0.111 : udp 56737 -> 67 : from "ppp0" to "wlan1";
 }

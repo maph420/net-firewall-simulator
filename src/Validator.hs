@@ -75,13 +75,17 @@ checkForIPIdentif net formatErr = checkForIPIdentif' net S.empty
                                         else checkForIPIdentif' xs (S.insert currip acc)
 
 -- Verifica que exista un dispositivo llamado 'firewall' y que sea ruteable a internet (para recibir paquetes del exterior)
+-- adicionalmente chequea, para todo dispositivo que no sea el firewall, que tenga exactamente 1 interfaz definida. (aclarar en el readme)
 checkFirewall :: Network -> ErrAST ()
 checkFirewall [] = throwError $ "no se reconoce ningún dispostivo llamado 'firewall', abortando\n"
 checkFirewall (d:ds) = if (T.toLower $ devName d) == "firewall"
                         then if IPV4.public (ipv4Dir d)
                                 then return ()
                                 else throwError $ "la IP del dispositivo de firewall debe ser ruteable en internet (IP pública). Ip provista: " `T.append` (IPV4.encode (ipv4Dir d))
-                        else checkFirewall ds
+                        else 
+                            if (Prelude.length $ interfaces d) > 1
+                                then throwError $ "Un dispositivo que no es el firewall posee más de una interfaz. Interfaces provistas: " `T.append` (T.show (interfaces d))
+                                else checkFirewall ds
 
 -- Verifica que ninguna regla de la cadena INPUT tenga una restriccion '-outif', ni una OUTPUT una '-inif'
 checkChainRules :: RulesChains -> ErrAST ()
