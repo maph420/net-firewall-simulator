@@ -10,7 +10,7 @@ Un archivo del simulador (extensión `.fws`) se divide en tres secciones. A cont
 
 ### Sección network
 
-Define los dispositivos de la red que serán protegidos por el firewall. Asi se definirían **N** dispositivos en la red:
+Define los dispositivos de la red que serán protegidos por el firewall. Asi se definirían **N** dispositivos en la red, además del firewall:
 ```
 
 network {
@@ -58,7 +58,7 @@ Cada dispositivo se describe con:
 **``interfaces:``** la interfaz/interfaces del dispositivo. Para especificar múltiples interfaces, proveer una lista de cadenas de caracteres (encerrar entre `""`) que identifiquen a cada una de las interfaces disponibles del dispositivo, separadas por '`,`'.
 
 > [!IMPORTANT]
-> Observar que sólo al firewall se le permite especificar más de una interfaz. Esto es porque cada interfaz tiene su propia dirección ip, pero convenimos especificar todas las interfaces del firewall, proveyendo únicamente la ip de la interfaz que lo vincula al enrutador.
+> Observar que sólo al firewall se le permite especificar más de una interfaz. Esto es porque cada interfaz tiene su propia dirección ip, pero convenimos especificar todas las interfaces del firewall, proveyendo únicamente la ip de la interfaz que lo vincula al enrutador (eth3 es asumida).
 
 > [!IMPORTANT]
 > Para que el programa funcione correctamente, se DEBE definir un dispositivo asociado al firewall, de nombre ``firewall``. Por convención, consideramos al firewall como un dispositivo más en la red.
@@ -231,6 +231,8 @@ El esquema de la red, suponiendo que **N** subredes de dispositivos fueron defin
   <img src="https://i.postimg.cc/kGJFVz2B/REFF.jpg" alt="REFF.jpg" width="500" height="275" caption="sdfsdf">
 </a>
 
+Cabe aclarar que la interfaz **eth3** está presente de manera implícita como interfaz del firewall, aún si no es declarada en el campo ``interfaces`` de ``devices``.
+
 ## Instalación
 
 El proyecto corre sobre **stack**, una herramienta que permite gestionar proyectos en **Haskell**.
@@ -243,7 +245,7 @@ También se puede optar por instalarla manualmente mediante un script:
 
 > curl -sSL https://get.haskellstack.org/ | sh
 
-Para compilar el proyecto, basta con navegar hasta el directorio del proyecto (`net-firewall-simulator`) y correr:
+Para compilar el proyecto, basta con navegar hasta el directorio del mismo (`net-firewall-simulator`) y correr:
 
 > stack build
 

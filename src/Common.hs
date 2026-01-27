@@ -1,8 +1,3 @@
--- definir aca las estructuras de datos del AST a utilizar
-
--- stack repl para terminal interactiva
--- agregar al path: echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc    source ~/.bashrc
-
 module Common
     (   Interface,
         Protocol(..),
@@ -46,7 +41,7 @@ type PortList = [Port]
 ------------------------
 
 data Device = Device {
-    devName     :: T.Text, -- nombre del dispostivio
+    devName     :: T.Text,
     macDir      :: T.Text,
     ipv4Dir     :: IPV4.IPv4,
     subnet      :: IPV4.IPv4Range, 
@@ -60,12 +55,6 @@ type Network = [Device]
 ------------------------------------
 
 data Protocol = TCP | UDP | ANY deriving (Eq, Show)
-
--- timestamp? a priori, no
--- id, Text o int?
---     decision de diseño? chequear
---    si bien no necesariamente en el paquete se deben especificar cosas como la dir fuente (puede ser que el nodo remitente no espere
---    respuesta) o la interfaz a la que llegará un paquete, por propósitos de la simulación los dejamos como campos obligatorios
 
 -- Paquete de red, representa un envío en la red en la que se está trabajando.
 data Packet = Packet {
@@ -123,7 +112,7 @@ data FirewallConfig = FirewallConfig {
     fwIP :: IPV4.IPv4,
     fwRules :: RulesChains,
     fwDevices :: [Device]
-}
+} deriving Show
 
 -- Tipo de mensaje de log
 data LogLevel = Information | Warning | Error deriving Show

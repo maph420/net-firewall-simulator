@@ -21,7 +21,7 @@ network {
         mac = "00:22:CA:FE:CA:FE";
         ip = 211.168.1.1;         
         subnet = 211.168.1.0/16;   
-        interfaces = "eth0", "eth1";
+        interfaces = "eth0", "eth3";
     }
 }
 

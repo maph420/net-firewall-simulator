@@ -21,25 +21,30 @@ astValidation inf = do
                         checkRepeatedChains rules 
                         checkSubnetRanges network 
                         checkFirewall network 
+
                         -- unicidad de identificadores de dispositivos, paquetes, dir mac, ip
-                        checkForIdentifiers network devName (\dn -> "el dispositivo de nombre '" `T.append` dn `T.append` "' aparece repetido\n")
-                        checkForIdentifiers packets packid (\paid -> "el paquete de nombre '" `T.append` paid `T.append` "' aparece repetido\n")
-                        checkForIdentifiers network macDir (\md -> "la direccion MAC '" `T.append` md `T.append` "' aparece repetida\n")
-                        checkForIPIdentif network (\ipdir -> "la direccion IPv4 '" `T.append` (IPV4.encode ipdir) `T.append` "' aparece repetida.\n")
+                        checkForIdentifiers network devName (\dn -> "El dispositivo de nombre '" `T.append` dn `T.append` "' aparece repetido\n")
+                        checkForIdentifiers packets packid (\paid -> "El paquete de nombre '" `T.append` paid `T.append` "' aparece repetido\n")
+                        checkForIdentifiers network macDir (\md -> "La direccion MAC '" `T.append` md `T.append` "' aparece repetida\n")
+                        
+                        checkForIPIdentif network (\ipdir -> "La direccion IPv4 '" `T.append` (IPV4.encode ipdir) `T.append` "' aparece repetida.\n")
+                         
                         checkChainRules rules  
                         return inf
+
+
 
 -- Verifica si una misma chain fue declarada mas de una vez
 checkRepeatedChains :: RulesChains -> ErrAST ()
 checkRepeatedChains rulc = mapM_ check rulc
     where
         check :: (PacketTarget, [Rule]) -> ErrAST ()
-        check (target, _) =  let 
-                                matches = Prelude.filter (\(pt, _) -> target == pt) rulc
-                             in
-                                if (Prelude.length matches > 1)
-                                    then throwError $ "Cadena " `T.append` (T.show target) `T.append` " aparece repetida\n" 
-                                    else return ()
+        check (target, _) =     let 
+                                    matches = Prelude.filter (\(pt, _) -> target == pt) rulc
+                                in
+                                    if (Prelude.length matches > 1)
+                                        then throwError $ "Cadena " `T.append` (T.show target) `T.append` " aparece repetida\n" 
+                                        else return ()
 
 -- Verifica que toda ip suministrada coincida con la subnet en donde esta definida
 checkSubnetRanges :: Network -> ErrAST ()
@@ -80,12 +85,24 @@ checkFirewall :: Network -> ErrAST ()
 checkFirewall [] = throwError $ "No se reconoce ningún dispostivo llamado 'firewall', abortando\n"
 checkFirewall (d:ds) = if (T.toLower $ devName d) == "firewall"
                         then if IPV4.public (ipv4Dir d)
-                                then return ()
+                                then checkReps (interfaces d)
                                 else throwError $ "La IP del dispositivo de firewall debe ser ruteable en internet (IP pública). Ip provista: " `T.append` (IPV4.encode (ipv4Dir d))
                         else 
                             if (Prelude.length $ interfaces d) > 1
                                 then throwError $ "Un dispositivo que no es el firewall posee más de una interfaz. Interfaces provistas: " `T.append` (T.show (interfaces d))
                                 else checkFirewall ds
+ 
+-- verificar si las interfaces del dispositivo están repetidas
+checkReps :: [Interface] -> ErrAST ()
+checkReps ifs = mapM_ checkRep ifs
+            where
+                checkRep iface =    let
+                                        matches = Prelude.filter (\i -> i == iface) ifs
+                                    in
+                                        if (Prelude.length matches > 1)
+                                            then throwError $ "Interfaz " `T.append` (T.show iface) `T.append` " aparece repetida en el firewall. \n" 
+                                            else return ()
+
 
 -- Verifica que ninguna regla de la cadena INPUT tenga una restriccion '-outif', ni una OUTPUT una '-inif'
 checkChainRules :: RulesChains -> ErrAST ()
@@ -101,7 +118,7 @@ checkChainRules = mapM_ checkChainRule
             throwError $ "No está permitido el uso de la opción '-inif' en una cadena OUTPUT \n\n"
                                         | otherwise = return ()
 
-        -- Verificar si un Match contiene un tipo específico
+        -- Verificar si un Match contiene un tipo especifico
         containsMatchType :: Match -> Match -> Bool
         containsMatchType (MatchInIf _) (MatchInIf _) = True
         containsMatchType (MatchOutIf _) (MatchOutIf _) = True

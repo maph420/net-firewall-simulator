@@ -16,7 +16,6 @@ import qualified Data.Text as T
 import Text.Printf (printf)
 import PrettyPrinter (renderMatch)
 
-
 --------------------------
 -- Funciones auxiliares --
 --------------------------
@@ -57,7 +56,6 @@ adjustPacketOutIf devices pkt =
     case (findDeviceByIP (dstip pkt) devices) of
         Nothing -> pkt { egressif = defaultFwIf }  -- IP desconocida => viene de internet, convenimos usar eth3
         Just _ -> pkt
-
 
 --------------------------------------------
 -- Funciones de verificacion del firewall --
@@ -169,24 +167,40 @@ eval m pkt = eval' m
     eval' (MatchDstPort dps) = any (== dstport pkt) dps
     eval' (AndMatch m1 m2) = (eval' m1) && (eval' m2)
 
+
+
 -- Crear estructura de informacion temporal
 buildConfig :: Info -> ErrAST FirewallConfig
 buildConfig info = do
     validatedInfo <- astValidation info
     
-    let firewallDevices = filter (\d -> T.toLower (devName d) == "firewall") 
-                           (infoNetwork validatedInfo)
-    
+    let (firewall, updatedDevices) = processDevices (infoNetwork validatedInfo)
+
     -- El lexer ya deberia haber constatado que existe 1 y solo 1 firewall, pero por las dudas chequeamo
-    firewall <- case firewallDevices of
-        [d] -> Right d
-        _ -> Left "Error: El validador fallo en verificar el firewall"
-    
-    return FirewallConfig {
-        fwIP = ipv4Dir firewall,
-        fwRules = infoRules validatedInfo,
-        fwDevices = infoNetwork validatedInfo
-    }
+    case firewall of
+        Just fw -> return FirewallConfig {
+            fwIP = ipv4Dir fw,
+            fwRules = infoRules validatedInfo,
+            fwDevices = updatedDevices
+        }
+        Nothing -> Left "El validador fallo en verificar el firewall"
+
+-- Obtiene lo/los dispositivos asociados al firewall, en caso de encontrarlo le agrega la interfaz por defecto hacia el router
+processDevices :: [Device] -> (Maybe Device, [Device])
+processDevices devices = foldr processDevice (Nothing, []) devices
+  where
+    processDevice :: Device -> (Maybe Device, [Device]) -> (Maybe Device, [Device])
+    processDevice d (found, acc)    | T.toLower (devName d) == "firewall" = (Just $ newDvs, newDvs : acc)
+                                    | otherwise = (found, d : acc)
+        where 
+            newDvs = appendDefaultIf d
+
+appendDefaultIf :: Device -> Device
+appendDefaultIf dv = if defaultFwIf `elem` ifs
+                        then dv
+                        else dv { interfaces = ifs ++ [defaultFwIf] }
+    where
+        ifs = interfaces dv 
 
 --------------------------------------
 -- funcion para iniciar simulacion ---
@@ -199,7 +213,7 @@ runFirewallSimulation info =
     in case buildConfig infoWithIds of
         Left err -> 
             ([], [LogEntry Error err Nothing])
-        Right config -> runSimulation config (infoPackets infoWithIds)
+        Right config -> runSimulation config (infoPackets infoWithIds) 
     where
         runSimulation :: FirewallConfig -> [Packet] -> ([(Packet, Action)], [LogEntry])
         runSimulation config packets = 
@@ -239,8 +253,4 @@ formatResults pas = T.pack $ concatMap formatLine pas
     verboseAction Accept = "Accepted"
     verboseAction Drop = "Dropped"
     verboseAction Reject = "Rejected"
-    
-
-
-
     
