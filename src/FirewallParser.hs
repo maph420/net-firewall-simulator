@@ -404,7 +404,7 @@ happyReduction_25 (_ `HappyStk`
         _ `HappyStk`
         happyRest)
          = HappyAbsSyn21
-                 (Rule (T.pack "default") MatchAny happy_var_3 Nothing
+                 (Rule (T.pack "") MatchAny happy_var_3 Nothing
         ) `HappyStk` happyRest
 
 happyReduce_26 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
@@ -548,24 +548,22 @@ happyReduction_41 (HappyAbsSyn29  happy_var_3)
 happyReduction_41 _ _ _  = notHappyAtAll 
 
 happyReduce_42 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
-happyReduce_42 = happySpecReduce_3  21# happyReduction_42
-happyReduction_42 (HappyAbsSyn28  happy_var_3)
-        _
-        _
-         =  HappyAbsSyn26
-                 (conjunctIPRangeMatches happy_var_3 MatchSrcSubnet
-        )
-happyReduction_42 _ _ _  = notHappyAtAll 
+happyReduce_42 = happyMonadReduce 3# 21# happyReduction_42
+happyReduction_42 ((HappyAbsSyn28  happy_var_3) `HappyStk`
+        _ `HappyStk`
+        _ `HappyStk`
+        happyRest) tk
+         = happyThen ((( checkSubnetList happy_var_3 `thenP` \vranges -> returnP $ conjunctIPRangeMatches vranges MatchSrcSubnet))
+        ) (\r -> happyReturn (HappyAbsSyn26 r))
 
 happyReduce_43 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
-happyReduce_43 = happySpecReduce_3  21# happyReduction_43
-happyReduction_43 (HappyAbsSyn28  happy_var_3)
-        _
-        _
-         =  HappyAbsSyn26
-                 (conjunctIPRangeMatches happy_var_3 MatchDstSubnet
-        )
-happyReduction_43 _ _ _  = notHappyAtAll 
+happyReduce_43 = happyMonadReduce 3# 21# happyReduction_43
+happyReduction_43 ((HappyAbsSyn28  happy_var_3) `HappyStk`
+        _ `HappyStk`
+        _ `HappyStk`
+        happyRest) tk
+         = happyThen ((( checkSubnetList happy_var_3 `thenP` \vranges -> returnP $ conjunctIPRangeMatches vranges MatchDstSubnet))
+        ) (\r -> happyReturn (HappyAbsSyn26 r))
 
 happyReduce_44 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_44 = happySpecReduce_3  21# happyReduction_44
@@ -889,6 +887,10 @@ readIP ipStr = case IPV4.decodeString ipStr of
     Just ip -> ip
     Nothing -> error $ "Direccion IP invalida: " ++ ipStr
 
+-- validar lista de subnets
+checkSubnetList :: [(String, Int)] -> P [IPV4.IPv4Range]
+checkSubnetList = mapP (\(ipStr, pref) -> readSubnet ipStr pref)  
+
 -- Monadico para chequear por errores en el prefijo de red
 readSubnet :: String -> Int -> P IPV4.IPv4Range
 readSubnet ipStr pref = case IPV4.decodeString ipStr of
@@ -915,13 +917,15 @@ checkValidMAC macStr =
        else failP $ "Dirección MAC inválida (" ++ macStr ++ ") \nFormato esperado: ?? : ?? : ?? : ?? : ?? : ?? (donde ? es un hexadecimal)"
 
 -- como precondicion, para estas funciones las producciones de la gramatica deben garantizar que la lista de strings tenga al menos 1 elemento.
+-- dada una lista de strings que identifican IPs y un constructor de tipo, retornar el tipo de match correspondiente segun el constructor
 conjunctIPMatches :: [ String ] -> (IPV4.IPv4 -> Match) -> Match
 conjunctIPMatches [ipStr] construct = construct (readIP ipStr)
 conjunctIPMatches (ipStr : ipStrs) construct = AndMatch (construct (readIP ipStr)) (conjunctIPMatches ipStrs construct)
 
-conjunctIPRangeMatches :: [(String, Int)] -> (IPV4.IPv4Range -> Match) -> Match
-conjunctIPRangeMatches [(ipStr, n)] c = c (IPV4.range (readIP ipStr) (fromIntegral n))
-conjunctIPRangeMatches ((ipStr, n) : ipStrs) c = AndMatch (c (IPV4.range (readIP ipStr) (fromIntegral n))) (conjunctIPRangeMatches ipStrs c)
+
+conjunctIPRangeMatches :: [IPV4.IPv4Range] -> (IPV4.IPv4Range -> Match) -> Match
+conjunctIPRangeMatches [r] construct = construct r
+conjunctIPRangeMatches (r:rs) construct = AndMatch (construct r) (conjunctIPRangeMatches rs construct)
 
 conjunctIfMatches :: [String] -> (T.Text -> Match) -> Match
 conjunctIfMatches [ifStr] c = c (T.pack ifStr)

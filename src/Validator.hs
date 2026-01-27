@@ -38,7 +38,7 @@ checkRepeatedChains rulc = mapM_ check rulc
                                 matches = Prelude.filter (\(pt, _) -> target == pt) rulc
                              in
                                 if (Prelude.length matches > 1)
-                                    then throwError $ "cadena " `T.append` (T.show target) `T.append` " aparece repetida\n" 
+                                    then throwError $ "Cadena " `T.append` (T.show target) `T.append` " aparece repetida\n" 
                                     else return ()
 
 -- Verifica que toda ip suministrada coincida con la subnet en donde esta definida
@@ -48,7 +48,7 @@ checkSubnetRanges = mapM_ checkDevice
         checkDevice :: Device -> ErrAST ()
         checkDevice d = if (subnet d) `IPV4.contains` (ipv4Dir d) 
                             then return ()
-                            else throwError $ "la ip " `T.append` (encode (ipv4Dir d)) `T.append` 
+                            else throwError $ "La ip " `T.append` (encode (ipv4Dir d)) `T.append` 
                             " no pertenece al rango subnet: " `T.append` (encodeRange (subnet d)) `T.append` "\n"
 
 -- Verifica si un identificador dado aparece repetido en la lista pasada. Se pasa el extractor de campo para saber por cual del registro se quiere chequear.
@@ -77,11 +77,11 @@ checkForIPIdentif net formatErr = checkForIPIdentif' net S.empty
 -- Verifica que exista un dispositivo llamado 'firewall' y que sea ruteable a internet (para recibir paquetes del exterior)
 -- adicionalmente chequea, para todo dispositivo que no sea el firewall, que tenga exactamente 1 interfaz definida. (aclarar en el readme)
 checkFirewall :: Network -> ErrAST ()
-checkFirewall [] = throwError $ "no se reconoce ningún dispostivo llamado 'firewall', abortando\n"
+checkFirewall [] = throwError $ "No se reconoce ningún dispostivo llamado 'firewall', abortando\n"
 checkFirewall (d:ds) = if (T.toLower $ devName d) == "firewall"
                         then if IPV4.public (ipv4Dir d)
                                 then return ()
-                                else throwError $ "la IP del dispositivo de firewall debe ser ruteable en internet (IP pública). Ip provista: " `T.append` (IPV4.encode (ipv4Dir d))
+                                else throwError $ "La IP del dispositivo de firewall debe ser ruteable en internet (IP pública). Ip provista: " `T.append` (IPV4.encode (ipv4Dir d))
                         else 
                             if (Prelude.length $ interfaces d) > 1
                                 then throwError $ "Un dispositivo que no es el firewall posee más de una interfaz. Interfaces provistas: " `T.append` (T.show (interfaces d))

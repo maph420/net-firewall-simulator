@@ -143,8 +143,8 @@ Spec : '-' srcip IPList { conjunctIPMatches $3 MatchSrcIP }
                           returnP $ conjunctIfMatches vIfs MatchOutIf }
     | '-' srcp PortSpec { MatchSrcPort $3 }
     | '-' dstp PortSpec { MatchDstPort $3 }
-    | '-' srcsubnet SubnetList { conjunctIPRangeMatches $3 MatchSrcSubnet }
-    | '-' dstsubnet SubnetList { conjunctIPRangeMatches $3 MatchDstSubnet }
+    | '-' srcsubnet SubnetList { % checkSubnetList $3 `thenP` \vranges -> returnP $ conjunctIPRangeMatches vranges MatchSrcSubnet }
+    | '-' dstsubnet SubnetList { % checkSubnetList $3 `thenP` \vranges -> returnP $ conjunctIPRangeMatches vranges MatchDstSubnet }
     | '(' SpecList ')' { $2 }
 
 IPList : IP_ADDR { [$1] }
@@ -316,11 +316,15 @@ readIP ipStr = case IPV4.decodeString ipStr of
     Just ip -> ip
     Nothing -> error $ "Direccion IP invalida: " ++ ipStr
 
+-- validar lista de subnets
+checkSubnetList :: [(String, Int)] -> P [IPV4.IPv4Range]
+checkSubnetList = mapP (\(ipStr, pref) -> readSubnet ipStr pref)  
+
 -- Monadico para chequear por errores en el prefijo de red
 readSubnet :: String -> Int -> P IPV4.IPv4Range
 readSubnet ipStr pref = case IPV4.decodeString ipStr of
     Just ip -> do
-                if (pref < 0 || pref > 32) 
+                if (pref <= 0 || pref > 32) 
                 then failP $ "Rango CIDR inválido para la subred (" ++ show pref ++ ")"
                 else returnP $ IPV4.range ip (fromIntegral pref)
     Nothing -> failP $ "Direccion IP invalida en rango de subnet: " ++ ipStr
@@ -342,13 +346,15 @@ checkValidMAC macStr =
        else failP $ "Dirección MAC inválida (" ++ macStr ++ ") \nFormato esperado: ?? : ?? : ?? : ?? : ?? : ?? (donde ? es un hexadecimal)"
 
 -- como precondicion, para estas funciones las producciones de la gramatica deben garantizar que la lista de strings tenga al menos 1 elemento.
+-- dada una lista de strings que identifican IPs y un constructor de tipo, retornar el tipo de match correspondiente segun el constructor
 conjunctIPMatches :: [ String ] -> (IPV4.IPv4 -> Match) -> Match
 conjunctIPMatches [ipStr] construct = construct (readIP ipStr)
 conjunctIPMatches (ipStr : ipStrs) construct = AndMatch (construct (readIP ipStr)) (conjunctIPMatches ipStrs construct)
 
-conjunctIPRangeMatches :: [(String, Int)] -> (IPV4.IPv4Range -> Match) -> Match
-conjunctIPRangeMatches [(ipStr, n)] c = c (IPV4.range (readIP ipStr) (fromIntegral n))
-conjunctIPRangeMatches ((ipStr, n) : ipStrs) c = AndMatch (c (IPV4.range (readIP ipStr) (fromIntegral n))) (conjunctIPRangeMatches ipStrs c)
+
+conjunctIPRangeMatches :: [IPV4.IPv4Range] -> (IPV4.IPv4Range -> Match) -> Match
+conjunctIPRangeMatches [r] construct = construct r
+conjunctIPRangeMatches (r:rs) construct = AndMatch (construct r) (conjunctIPRangeMatches rs construct)
 
 conjunctIfMatches :: [String] -> (T.Text -> Match) -> Match
 conjunctIfMatches [ifStr] c = c (T.pack ifStr)

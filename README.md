@@ -14,18 +14,26 @@ Define los dispositivos de la red que serán protegidos por el firewall. Asi se 
 ```
 
 network {
+
+device firewall {
+    mac = "???";
+    ip = ???.???.???.???;
+    subnet = ???.???.???.???/??;
+    interfaces = "???", "???", ..., "???";
+}
+
 device device-name-1 {
 mac = "???";
 ip = ???.???.???.???;
 subnet = ???.???.???.???/??;
-interfaces = "???", "???", ..., "???";
+interfaces = "???";
 }
 
 device device-name-2 {
     mac = "???";
     ip = ???.???.???.???;         
     subnet = ???.???.???.???/??;   
-    interfaces = "???", "???", ..., "???";
+    interfaces = "???";
 }
 .
 .
@@ -34,7 +42,7 @@ device device-name-N {
     mac = "???";
     ip = ???.???.???.???;         
     subnet = ???.???.???.???/??;   
-    interfaces = "???", "???", ..., "???";
+    interfaces = "???";
 }
 
 }
@@ -47,10 +55,14 @@ Cada dispositivo se describe con:
 
 **``subnet:``** el rango de direcciones **IPv4** de la subred a la cual pertenece el dispositivo. Usar notación **CIDR** (más abajo hay un ejemplo). La subnet debe ser consistente con la dirección **IPv4** suministrada.
 
-**``interfaces:``** una lista de cadenas de caracteres (encerrar entre `""`) que identifiquen a cada una de las interfaces disponibles del dispositivo, separadas por '`,`'.
+**``interfaces:``** la interfaz/interfaces del dispositivo. Para especificar múltiples interfaces, proveer una lista de cadenas de caracteres (encerrar entre `""`) que identifiquen a cada una de las interfaces disponibles del dispositivo, separadas por '`,`'.
+
+> [!IMPORTANT]
+> Observar que sólo al firewall se le permite especificar más de una interfaz. Esto es porque cada interfaz tiene su propia dirección ip, pero convenimos especificar todas las interfaces del firewall, proveyendo únicamente la ip de la interfaz que lo vincula al enrutador.
 
 > [!IMPORTANT]
 > Para que el programa funcione correctamente, se DEBE definir un dispositivo asociado al firewall, de nombre ``firewall``. Por convención, consideramos al firewall como un dispositivo más en la red.
+
 
 > [!NOTE]
 > Para asignar la subred del firewall, usamos el rango en el cual está contenida la ip publica del mismo. Por ejemplo, para un firewall cuya ip publica (para acceder a internet a traves del router) es 200.3.1.2, se podria usar un rango: 200.3.1.0/24. No afecta a los resultados de la simulacion, asi que es solo una convención.
