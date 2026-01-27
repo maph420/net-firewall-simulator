@@ -2,7 +2,7 @@
 
 ## Introduccion
 
-El proyecto consiste en un **EDSL** cuyo objetivo es simular el comportamiento de un firewall de red. Dado un escenario predefinido (red de dispositivos y paquetes que atraviesan el firewall), el lenguaje permite replicar su funcionamiento. Está inspirado en *iptables* de UNIX, y las reglas que permite definir el firewall se asemejan a las de la tabla **filter** de este.
+El proyecto consiste en un **DSL** cuyo objetivo es simular el comportamiento de un firewall de red. Dado un escenario predefinido (red de dispositivos y paquetes que atraviesan el firewall), el lenguaje permite replicar su funcionamiento. Está inspirado en *iptables* de UNIX, y las reglas que permite definir el firewall se asemejan a las de la tabla **filter** de este.
   
 ## Archivos del simulador
 
@@ -223,6 +223,13 @@ rules {
 > [!TIP]
 > Lo unico que debería ser tratado como una cadena de caracteres (es decir, encerrado entre `""`) son las direcciones MAC y las interfaces de red.
 
+### Esquema de red convenido
+
+El esquema de la red, suponiendo que **N** subredes de dispositivos fueron definidas, se ve de esta manera:
+
+<a>
+  <img src="https://i.postimg.cc/kGJFVz2B/REFF.jpg" alt="REFF.jpg" width="500" height="275" caption="sdfsdf">
+</a>
 
 ## Instalación
 
@@ -232,7 +239,7 @@ Para conseguirla en debian/ubuntu:
 
 > sudo apt-get install stack
 
-También se puede optar por instalarlo manualmente mediante un script:
+También se puede optar por instalarla manualmente mediante un script:
 
 > curl -sSL https://get.haskellstack.org/ | sh
 
