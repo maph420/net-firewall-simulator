@@ -16,6 +16,8 @@ subnets {
         range =10.1.1.0/29;
         interface = "eth0";
     }
+
+    
 }
 
 
@@ -25,7 +27,7 @@ devices {
 
     device pcA {
         mac = "AA:BB:CC:DD:EE:FE";
-        ip =  10.23.1.1;
+        ip =  10.23.1.121;
         subnet = LAN;
     }
 
@@ -260,7 +262,7 @@ rules {
 // por ssh. Desde el firewall, solo se puede consultar dns en el servidor de la DMZ
 
     chain INPUT {
-        -srcip 10.23.23.5 -srcsubnet 10.23.0.0/16 -dstip 200.123.131.112 -inif "eth2" -do ACCEPT;
+        -srcip 10.23.23.5 -srcsubnet 10.23.0.0/16 -dstip 200.123.131.112 -inif "eth22" -do ACCEPT;
         -srcsubnet 10.23.0.0/16 -do REJECT;
         -srcsubnet 10.10.0.0/22 -do REJECT;
         -srcsubnet 10.1.1.0/29  -do REJECT;
@@ -276,7 +278,6 @@ rules {
         -dstsubnet 10.1.1.0/29  -do REJECT;
         -default DROP;
     }
-
 
     // No hay más accesos que los especificados.
 

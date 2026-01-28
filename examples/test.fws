@@ -23,7 +23,7 @@ devices {
 	}
 
 	device pc-lab {
-		mac = "AA:BB:CC:DD:EE:FF";
+		mac = "AA:BB:CC:DD:EE:EE";
         ip = 200.1.1.0;
 		subnet = DMZ;
 	}

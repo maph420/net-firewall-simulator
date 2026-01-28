@@ -389,7 +389,7 @@ checkValidPort portnum  | (portnum < 0 || portnum > 65535) = failP $ "Numero de 
                         
 checkValidIf :: String -> P String
 checkValidIf str = if (length str) > 15 
-                    then failP $ "Nombre de interfaz de red invalido, muy largo (" ++ str ++ ")"
+                    then failP $ "Nombre muy largo para ser una interfaz de red válida (" ++ str ++ ")"
                     else returnP str
 
 checkValidMAC :: String -> P String
@@ -435,7 +435,7 @@ resolveDevice subnets (RawDevice name mac ip subnetRef isFirewall)
                 if subnetRange subnet `IPV4.contains` ip
                     then returnP $ Device name mac ip (subnetRange subnet) [subnetInterface subnet]
                     else failP $ "IP " ++ show ip ++ " no está en la subred " ++ T.unpack subnetRef
-            Nothing -> failP $ "Subred no encontrada: " ++ T.unpack subnetRef
+            Nothing -> failP $ "Subred no encontrada (" ++ T.unpack subnetRef ++ ")"
 
 
 -- Esta funcion se invoca al ocurrir un error de parseo

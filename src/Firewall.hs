@@ -91,7 +91,7 @@ securityCheck p devices = do
             let iif = ingressif p
             if (T.null iif) || (iif == defaultFwIf) || (elem iif (interfaces srcDevice))
                 then return ()
-                else do logMsg' Warning ("Interfaz de entrada incorrecta para " `T.append` devName srcDevice 
+                else do logMsg' Warning ("Interfaz de entrada especificada en paquete incorrecta para " `T.append` devName srcDevice 
                                `T.append` ": " `T.append` ingressif p) (Just p)
 
     -- destino
@@ -104,7 +104,7 @@ securityCheck p devices = do
             let oif = egressif p
             if (T.null oif) || (oif == defaultFwIf) || (elem oif (interfaces dstDevice))
                 then return ()
-                else do logMsg' Warning ("Interfaz de salida incorrecta para " `T.append` devName dstDevice 
+                else do logMsg' Warning ("Interfaz de salida especificada en paquete incorrecta para " `T.append` devName dstDevice 
                                `T.append` ": " `T.append` egressif p) (Just p)
 
 
@@ -173,7 +173,7 @@ eval m pkt = eval' m
 -- Crear estructura de informacion temporal
 buildConfig :: Info -> ErrAST FirewallConfig
 buildConfig info = do
-    --validatedInfo <- astValidation info
+    astValidation info
 
     info' <- postProcess info
 

@@ -104,7 +104,7 @@ type RulesChains = [(PacketTarget, [Rule])]
 
 -- Estructura obtenida como resultado del parseo
 data Info = Info
-    { infoSubnets :: [Subnet]      -- Nuevo campo
+    { infoSubnets :: [Subnet]  
     , infoNetwork :: Network
     , infoPackets :: SentPackets
     , infoRules :: RulesChains

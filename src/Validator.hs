@@ -12,12 +12,14 @@ import Data.Text as T
 import Net.IPv4 as IPV4
 import qualified Data.Set as S
 
-{-
-astValidation :: Info -> ErrAST Info
+
+astValidation :: Info -> ErrAST ()
 astValidation inf = do 
                         let rules = infoRules inf
                             network = infoNetwork inf
                             packets = infoPackets inf
+                            subnetNames = infoSubnets inf
+                            
 
                         checkRepeatedChains rules 
                         checkSubnetRanges network 
@@ -27,14 +29,13 @@ astValidation inf = do
                         checkForIdentifiers network devName (\dn -> "El dispositivo de nombre '" `T.append` dn `T.append` "' aparece repetido\n")
                         checkForIdentifiers packets packid (\paid -> "El paquete de nombre '" `T.append` paid `T.append` "' aparece repetido\n")
                         checkForIdentifiers network macDir (\md -> "La direccion MAC '" `T.append` md `T.append` "' aparece repetida\n")
-                        
+                        checkForIdentifiers subnetNames subnetName (\sn -> "El nombre de subnet '" `T.append` sn `T.append` "' aparece repetido\n")
+
                         checkForIPIdentif network (\ipdir -> "La direccion IPv4 '" `T.append` (IPV4.encode ipdir) `T.append` "' aparece repetida.\n")
                          
                         checkChainRules rules  
-                        return inf
--}
+                        return ()
 
-astValidation = undefined
 
 -- Verifica si una misma chain fue declarada mas de una vez
 checkRepeatedChains :: RulesChains -> ErrAST ()
