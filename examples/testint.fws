@@ -1,0 +1,261 @@
+// intensive-tests.fws
+
+subnets {
+    
+    subnet INTERNAL {
+        range = 10.0.0.0/8;
+        firewall_interface = "eth0";
+    }
+
+    subnet DMZ {
+        range = 192.168.1.0/24;
+        firewall_interface = "eth1";
+    }
+
+    subnet GUEST {
+        range = 172.16.0.0/16;
+        firewall_interface = "eth2";
+    }
+
+    subnet SERVERS {
+        range = 10.10.0.0/24;
+        firewall_interface = "eth3";
+    }
+}
+
+devices {
+    // Dispositivos en INTERNAL
+    device pc-alice {
+        mac = "00:11:22:33:44:55";
+        ip = 10.0.1.10;
+        subnet = INTERNAL;
+    }
+
+    device pc-bob {
+        mac = "00:11:22:33:44:56";
+        ip = 10.0.1.20;
+        subnet = INTERNAL;
+    }
+
+    device admin-pc {
+        mac = "00:11:22:33:44:57";
+        ip = 10.0.0.100;
+        subnet = INTERNAL;
+    }
+
+    // Dispositivos en DMZ
+    device webserver {
+        mac = "AA:BB:CC:DD:EE:01";
+        ip = 192.168.1.10;
+        subnet = DMZ;
+    }
+
+    device mailserver {
+        mac = "AA:BB:CC:DD:EE:02";
+        ip = 192.168.1.20;
+        subnet = DMZ;
+    }
+
+    // Dispositivos en GUEST
+    device guest-pc {
+        mac = "11:22:33:44:55:66";
+        ip = 172.16.1.100;
+        subnet = GUEST;
+    }
+
+    // Dispositivos en SERVERS
+    device database {
+        mac = "AA:BB:CC:DD:EE:03";
+        ip = 10.10.0.10;
+        subnet = SERVERS;
+    }
+
+    // Firewall (dispositivo especial)
+    device firewall {
+        mac = "00:FF:CA:FE:CA:FE";
+        public_ip = 203.0.113.1;
+    }
+}
+
+packets {
+    // ============================================
+    // PRUEBA 1: Comunicación intra-subnet (no debe pasar por firewall)
+    // ============================================
+    // 1a: PC Alice -> PC Bob (misma subred INTERNAL)
+    p1a-intra-subnet : 10.0.1.10 -> 10.0.1.20 : tcp 50000 -> 22 : from "eth0" to "eth0";
+    
+    // 1b: PC Alice -> PC Bob con interfaz incorrecta (debe dar warning)
+    p1b-intra-wrong-if : 10.0.1.10 -> 10.0.1.20 : tcp 50001 -> 22 : from "eth1" to "eth0";
+    
+    // ============================================
+    // PRUEBA 2: Comunicación entre subnets (FORWARD)
+    // ============================================
+    // 2a: INTERNAL -> DMZ (debe pasar por firewall)
+    p2a-internal-to-dmz : 10.0.1.10 -> 192.168.1.10 : tcp 50002 -> 80 : from "eth0" to "eth1";
+    
+    // 2b: DMZ -> INTERNAL (dirección inversa)
+    p2b-dmz-to-internal : 192.168.1.10 -> 10.0.1.10 : tcp 80 -> 50003 : from "eth1" to "eth0";
+    
+    // 2c: GUEST -> SERVERS
+    p2c-guest-to-servers : 172.16.1.100 -> 10.10.0.10 : tcp 50004 -> 3306 : from "eth2" to "eth3";
+    
+    // ============================================
+    // PRUEBA 3: Comunicación con el firewall (INPUT/OUTPUT)
+    // ============================================
+    // 3a: INTERNAL -> Firewall (INPUT)
+    p3a-to-firewall : 10.0.1.10 -> 203.0.113.1 : tcp 50005 -> 22 : from "eth0" to "";
+    
+    // 3b: Firewall -> Internet (OUTPUT)
+    p3b-from-firewall : 203.0.113.1 -> 8.8.8.8 : udp 50006 -> 53 : from "" to "eth3";
+    
+    // 3c: Firewall -> DMZ (OUTPUT)
+    p3c-firewall-to-dmz : 203.0.113.1 -> 192.168.1.10 : tcp 50007 -> 443 : from "" to "eth1";
+    
+    // ============================================
+    // PRUEBA 4: Comunicación con Internet
+    // ============================================
+    // 4a: INTERNAL -> Internet (debe usar eth3 por defecto)
+    p4a-internal-to-internet : 10.0.1.10 -> 8.8.8.8 : tcp 50008 -> 443 : from "eth0" to "eth3";
+    
+    // 4b: Internet -> DMZ (debe ajustar interfaz de entrada a eth3)
+    p4b-internet-to-dmz : 8.8.8.8 -> 192.168.1.10 : tcp 50009 -> 80 : from "eth3" to "eth1";
+    
+    // 4c: Internet -> Firewall
+    p4c-internet-to-firewall : 8.8.8.8 -> 203.0.113.1 : tcp 50010 -> 22 : from "eth3" to "";
+    
+    // ============================================
+    // PRUEBA 5: Paquetes con múltiples protocolos
+    // ============================================
+    // 5a: TCP hacia puerto web
+    p5a-tcp-web : 10.0.1.10 -> 192.168.1.10 : tcp 50011 -> 80 : from "eth0" to "eth1";
+    
+    // 5b: UDP hacia DNS
+    p5b-udp-dns : 10.0.1.10 -> 192.168.1.20 : udp 50012 -> 53 : from "eth0" to "eth1";
+    
+    // 5c: TCP hacia puerto no estándar
+    p5c-tcp-custom : 172.16.1.100 -> 10.10.0.10 : tcp 50013 -> 8080 : from "eth2" to "eth3";
+    
+    // ============================================
+    // PRUEBA 6: Paquetes con IPs inválidas/malformadas
+    // ============================================
+    // 6a: IP origen fuera de rango (debe dar warning)
+    p6a-invalid-src : 10.0.99.99 -> 10.0.1.20 : tcp 50014 -> 22 : from "eth0" to "eth0";
+    
+    // 6b: IP destino fuera de rango (debe dar warning)
+    p6b-invalid-dst : 10.0.1.10 -> 192.168.99.99 : tcp 50015 -> 80 : from "eth0" to "eth1";
+    
+    // ============================================
+    // PRUEBA 7: Paquetes con interfaces extremas
+    // ============================================
+    // 7a: Interfaz vacía en origen (para firewall)
+    p7a-empty-ingress : 203.0.113.1 -> 10.0.1.10 : tcp 50016 -> 80 : from "" to "eth0";
+    
+    // 7b: Interfaz vacía en destino (para firewall)
+    p7b-empty-egress : 10.0.1.10 -> 203.0.113.1 : tcp 50017 -> 22 : from "eth0" to "";
+    
+    // 7c: Ambas interfaces especificadas (comunicación normal)
+    p7c-both-ifs : 10.0.1.10 -> 192.168.1.10 : tcp 50018 -> 443 : from "eth0" to "eth1";
+    
+    // ============================================
+    // PRUEBA 8: Paquetes para testear políticas por defecto
+    // ============================================
+    // 8a: Paquete que no matchea ninguna regla (caerá en default)
+    p8a-no-match : 10.0.1.10 -> 192.168.1.20 : tcp 50019 -> 25 : from "eth0" to "eth1";
+    
+    // 8b: Paquete que debería ser aceptado por regla específica
+    p8b-explicit-match : 172.16.1.100 -> 10.10.0.10 : udp 50020 -> 53 : from "eth2" to "eth3";
+    
+    // 8c: Paquete desde Internet que no matchea reglas
+    p8c-internet-no-match : 8.8.4.4 -> 192.168.1.10 : tcp 50021 -> 8080 : from "eth3" to "eth1";
+}
+
+rules {
+    // ============================================
+    // REGLAS INPUT (hacia el firewall)
+    // ============================================
+    chain INPUT {
+        // Permitir SSH solo desde INTERNAL
+        -srcsubnet 10.0.0.0/8 -dstp 22 -do ACCEPT;
+        
+        // Permitir ping (ICMP simulado como cualquier protocolo)
+        -prot any -dstp 8 -do ACCEPT;
+        
+        // Bloquear intentos desde Internet al firewall
+        -inif "eth3" -do DROP;
+        
+        // Política por defecto: DROP
+        -default DROP;
+    }
+    
+    // ============================================
+    // REGLAS FORWARD (a través del firewall)
+    // ============================================
+    chain FORWARD {
+        // Permitir web (HTTP/HTTPS) desde cualquier lugar a DMZ
+        -prot tcp -dstp 80,443 -inif "eth0", "eth2", "eth3" -outif "eth1" -do ACCEPT;
+        
+        // Permitir DNS desde INTERNAL y GUEST a DMZ
+        -prot udp -dstp 53 -inif "eth0", "eth2" -outif "eth1" -do ACCEPT;
+        
+        // Permitir INTERNAL acceder a SERVERS (MySQL, SSH)
+        -srcsubnet 10.0.0.0/8 -dstsubnet 10.10.0.0/24 -dstp 22,3306 -do ACCEPT;
+        
+        // Permitir GUEST navegar por Internet (solo web)
+        -srcsubnet 172.16.0.0/16 -prot tcp -dstp 80,443 -outif "eth3" -do ACCEPT;
+        
+        // Bloquear GUEST de acceder a INTERNAL
+        -srcsubnet 172.16.0.0/16 -dstsubnet 10.0.0.0/8 -do DROP;
+        
+        // Bloquear DMZ de iniciar conexiones a INTERNAL
+        -srcsubnet 192.168.1.0/24 -dstsubnet 10.0.0.0/8 -do REJECT;
+        
+        // Permitir respuestas establecidas (simplificado)
+        -inif "eth1" -outif "eth0", "eth2", "eth3" -do ACCEPT;
+        
+        // Política por defecto: DROP
+        -default DROP;
+    }
+    
+    // ============================================
+    // REGLAS OUTPUT (desde el firewall)
+    // ============================================
+    chain OUTPUT {
+        // Permitir firewall hacer DNS queries
+        -prot udp -dstp 53 -do ACCEPT;
+        
+        // Permitir firewall actualizar servidores DMZ
+        -outif "eth1" -dstp 22,443 -do ACCEPT;
+        
+        // Bloquear tráfico a redes maliciosas conocidas
+        -dstip 10.0.0.0/8, 192.168.0.0/16, 172.16.0.0/12 -do REJECT;
+        
+        // Permitir todo lo demás
+        -default ACCEPT;
+    }
+}
+
+// ============================================
+// CASOS DE PRUEBA ESPERADOS:
+// ============================================
+// 1. p1a-intra-subnet: ACCEPT (intra-subnet, no pasa por firewall)
+// 2. p1b-intra-wrong-if: ACCEPT (intra-subnet) con WARNING de interfaz incorrecta
+// 3. p2a-internal-to-dmz: ACCEPT (regla FORWARD para web)
+// 4. p2b-dmz-to-internal: DROP (regla bloquea DMZ->INTERNAL)
+// 5. p2c-guest-to-servers: DROP (GUEST no puede acceder a SERVERS)
+// 6. p3a-to-firewall: ACCEPT (INPUT permite SSH desde INTERNAL)
+// 7. p3b-from-firewall: ACCEPT (OUTPUT permite DNS)
+// 8. p3c-firewall-to-dmz: ACCEPT (OUTPUT permite a DMZ)
+// 9. p4a-internal-to-internet: ACCEPT (FORWARD permite web a Internet)
+// 10. p4b-internet-to-dmz: ACCEPT (FORWARD permite web a DMZ)
+// 11. p4c-internet-to-firewall: DROP (INPUT bloquea eth3)
+// 12. p5a-tcp-web: ACCEPT (FORWARD para web)
+// 13. p5b-udp-dns: ACCEPT (FORWARD para DNS)
+// 14. p5c-tcp-custom: DROP (no hay regla para puerto 8080)
+// 15. p6a-invalid-src: ACCEPT (intra-subnet) con WARNING de IP desconocida
+// 16. p6b-invalid-dst: DROP (default) con WARNING de IP destino desconocida
+// 17. p7a-empty-ingress: ACCEPT (OUTPUT desde firewall)
+// 18. p7b-empty-egress: ACCEPT (INPUT al firewall desde INTERNAL)
+// 19. p7c-both-ifs: ACCEPT (FORWARD para web)
+// 20. p8a-no-match: DROP (default policy)
+// 21. p8b-explicit-match: ACCEPT (FORWARD para DNS)
+// 22. p8c-internet-no-match: DROP (default policy)

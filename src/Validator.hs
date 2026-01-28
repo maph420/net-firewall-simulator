@@ -12,6 +12,7 @@ import Data.Text as T
 import Net.IPv4 as IPV4
 import qualified Data.Set as S
 
+-- TODO: chequeo que ninguna subred se llame "INTERNET"
 
 astValidation :: Info -> ErrAST ()
 astValidation inf = do 
@@ -23,7 +24,6 @@ astValidation inf = do
 
                         checkRepeatedChains rules 
                         checkSubnetRanges network 
-                        checkFirewall network 
 
                         -- unicidad de identificadores de dispositivos, paquetes, dir mac, ip
                         checkForIdentifiers network devName (\dn -> "El dispositivo de nombre '" `T.append` dn `T.append` "' aparece repetido\n")
@@ -82,31 +82,6 @@ checkForIPIdentif net formatErr = checkForIPIdentif' net S.empty
                                         then throwError $ formatErr currip
                                         else checkForIPIdentif' xs (S.insert currip acc)
 
--- Verifica que exista un dispositivo llamado 'firewall' y que sea ruteable a internet (para recibir paquetes del exterior)
--- adicionalmente chequea, para todo dispositivo que no sea el firewall, que tenga exactamente 1 interfaz definida. (aclarar en el readme)
-checkFirewall :: Network -> ErrAST ()
-checkFirewall [] = throwError $ "No se reconoce ningún dispostivo llamado 'firewall', abortando\n"
-checkFirewall (d:ds) = if (T.toLower $ devName d) == "firewall"
-                        then if IPV4.public (ipv4Dir d)
-                                then checkReps (interfaces d)
-                                else throwError $ "La IP del dispositivo de firewall debe ser ruteable en internet (IP pública). Ip provista: " `T.append` (IPV4.encode (ipv4Dir d))
-                        else 
-                            if (Prelude.length $ interfaces d) > 1
-                                then throwError $ "Un dispositivo que no es el firewall posee más de una interfaz. Interfaces provistas: " `T.append` (T.show (interfaces d))
-                                else checkFirewall ds
- 
--- verificar si las interfaces del dispositivo están repetidas
-checkReps :: [Interface] -> ErrAST ()
-checkReps ifs = mapM_ checkRep ifs
-            where
-                checkRep iface =    let
-                                        matches = Prelude.filter (\i -> i == iface) ifs
-                                    in
-                                        if (Prelude.length matches > 1)
-                                            then throwError $ "Interfaz " `T.append` (T.show iface) `T.append` " aparece repetida en el firewall. \n" 
-                                            else return ()
-
-
 -- Verifica que ninguna regla de la cadena INPUT tenga una restriccion '-outif', ni una OUTPUT una '-inif'
 checkChainRules :: RulesChains -> ErrAST ()
 checkChainRules = mapM_ checkChainRule
@@ -128,17 +103,3 @@ checkChainRules = mapM_ checkChainRule
         containsMatchType ty (AndMatch m1 m2) = containsMatchType ty m1 || containsMatchType ty m2
         containsMatchType _ _ = False
 
-
-
-
-
-
-
-{-
-addFirewallInterfaces :: Device -> [Subnet] -> Device
-addFirewallInterfaces fw subnets =
-    let subnetIfaces = map subnetInterface subnets
-        allIfaces = S.toList $ S.fromList (subnetIfaces ++ [T.pack "eth3"]) -- no se puede S.add?
-    in fw { interfaces = allIfaces }
-
--}

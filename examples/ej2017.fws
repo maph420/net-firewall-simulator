@@ -27,7 +27,7 @@ devices {
 
     device pcA {
         mac = "AA:BB:CC:DD:EE:FE";
-        ip =  10.23.1.121;
+        ip =  10.23.1.1;
         subnet = LAN;
     }
 
@@ -214,6 +214,12 @@ packets {
     
     // 40. LAN -> Internet con ambas interfaces incorrectas
     p-lan-internet-both-wrong: 10.23.1.1 -> 9.9.9.9 : tcp 1063 -> 22 : from "eth1" to "eth0";
+
+    packtest : 10.23.1.1 -> 10.10.1.3 : tcp 2322 -> 110 : from "eth2" to "eth1";
+
+
+// p-lan-mail-pop3: 10.23.1.1 -> 10.10.1.3 : tcp 1024 -> 110 : from "eth2" to "eth1";
+    
 
 }
 

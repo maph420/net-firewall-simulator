@@ -18,7 +18,6 @@ module Common
         defaultFwIf,
         FirewallConfig(..),
         ParseResult(..),
-        RawDevice(..),
         Subnet(..)
     ) where
 
@@ -77,7 +76,7 @@ type SentPackets = [Packet]
 ------------------------------
 
 data PacketTarget = Input | Output | Forward deriving (Eq, Show, Ord)
-data Action = Accept | Drop | Reject deriving (Eq,Show)
+data Action = Accept | Drop | Reject deriving (Eq, Show)
 
 -- operador algebraico al cual deben traducirse las sentencias durante el parseo
 data Match = MatchAny 
@@ -91,6 +90,7 @@ data Match = MatchAny
     | MatchSrcPort PortList
     | MatchDstPort PortList
     | AndMatch Match Match -- encadenar todo lo que pide 1 regla con mas de 1 restriccion
+    | OrMatch Match Match -- cuando se especifican multiples puertos/ip, debe matchear cualquiera de ellos
     deriving (Show)
 
 data Rule = Rule {
@@ -102,6 +102,13 @@ data Rule = Rule {
 
 type RulesChains = [(PacketTarget, [Rule])]
 
+-- Informacion acerca de la subnet (identificador, ip e interfaz)
+data Subnet = Subnet
+    { subnetName :: T.Text
+    , subnetRange :: IPV4.IPv4Range
+    , subnetInterface :: T.Text 
+    } deriving (Show)
+
 -- Estructura obtenida como resultado del parseo
 data Info = Info
     { infoSubnets :: [Subnet]  
@@ -110,7 +117,7 @@ data Info = Info
     , infoRules :: RulesChains
     } deriving (Show)
 
--- Configuracion del firewall (informacion ya curada mediante un ast validation)
+-- Configuracion del firewall (informacion ya chequeada mediante ast validation)
 data FirewallConfig = FirewallConfig {
     fwIP :: IPV4.IPv4,
     fwRules :: RulesChains,
@@ -130,19 +137,3 @@ data LogEntry = LogEntry {
 -- Estructura para manejar errores de validacion durante el parseo.
 data ParseResult a = Ok a | Failed String
                      deriving Show
-
-data Subnet = Subnet
-    { subnetName :: T.Text
-    , subnetRange :: IPV4.IPv4Range
-    , subnetInterface :: T.Text  -- Interfaz del firewall para esta subred
-    } deriving (Show)
-
-
-
-data RawDevice = RawDevice {
-    rawName     :: T.Text,
-    rawMac      :: T.Text,
-    rawIP       :: IPV4.IPv4,
-    rawSubnetRef :: T.Text,  -- Nombre de la subred o "INTERNET"
-    rawIsFirewall :: Bool
-} deriving (Show)

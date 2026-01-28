@@ -21,7 +21,6 @@ import Data.List (find)
     mac             { TokenDeviceMac }
     ip              { TokenDeviceIP }
     subnet          { TokenDeviceSubnet }
-    interfaces      { TokenDeviceInterfaces }
     '{'             { TokenOpenBracket }
     '}'             { TokenCloseBracket }
     '='             { TokenAssign }
@@ -48,8 +47,6 @@ import Data.List (find)
     ')'             { TokenRParen }
     '-'             { TokenDash }
     '/'             { TokenSlash }
-    variables       { TokenVariables }
-    def             { TokenDef }
     srcip           { TokenSrcIP }
     dstip           { TokenDstIP }
     prot            { TokenProt }
@@ -65,7 +62,6 @@ import Data.List (find)
     srcsubnet       { TokenSrcSubnet }
     dstsubnet       { TokenDstSubnet }
     do              { TokenDo }
-    network         { TokenNetwork }
     default         { TokenDefault }
     ACCEPT          { TokenAccept }
     DROP            { TokenDrop }
@@ -185,13 +181,34 @@ PortList : NUMBER { [$1] }
          | NUMBER ',' PortList { $1 : $3 }
 
 {
+-- Estructuras intermedias para realizar el parseo de un dispositivo/subred
+
+data SubnetFieldsData = SubnetFieldsData
+    { subnetRan :: IPV4.IPv4Range
+    , subnetIf :: T.Text
+    }
+
+data DeviceFieldsData = DeviceFieldsData
+    { macAddr :: T.Text
+    , ipAddr :: IPV4.IPv4
+    , subnetRef :: T.Text  -- Nombre de la subred o "INTERNET" para firewall
+    }
+
+-- Estructura para parsear un dispositivo, el cual tiene el identificador de subred asociado, en
+-- lugar de la direccion de la misma. Se incluye la flag "rawIsFirewall" para chequeos
+data RawDevice = RawDevice {
+    rawName     :: T.Text,
+    rawMac      :: T.Text,
+    rawIP       :: IPV4.IPv4,
+    rawSubnetRef :: T.Text,
+    rawIsFirewall :: Bool
+} deriving (Show)
 
 data Token
     = TokenDevice String
     | TokenDeviceMac 
     | TokenDeviceIP
     | TokenDeviceSubnet
-    | TokenDeviceInterfaces
     | TokenOpenBracket
     | TokenCloseBracket
     | TokenAssign
@@ -222,8 +239,6 @@ data Token
     | TokenAnd
     | TokenLParen
     | TokenRParen
-    | TokenVariables
-    | TokenDef
     | TokenDevices
     | TokenSrcIP
     | TokenDstIP
@@ -236,7 +251,6 @@ data Token
     | TokenDstSubnet
     | TokenDo
     | TokenDefault
-    | TokenNetwork
     | TokenEOF     
     | TokenSubnets
     | TokenRange
@@ -245,24 +259,6 @@ data Token
 
     deriving Show
     
--- Estructuras intermedias para realizar el parseo de un dispositivo/subred
-
-
--- Estructuras intermedias
-
-data SubnetFieldsData = SubnetFieldsData
-    { subnetRan :: IPV4.IPv4Range
-    , subnetIf :: T.Text
-    }
-
-data DeviceFieldsData = DeviceFieldsData
-    { macAddr :: T.Text
-    , ipAddr :: IPV4.IPv4
-    , subnetRef :: T.Text  -- Nombre de la subred o "INTERNET" para firewall
-    }
-
-
-
 -- obtener numero de linea del estado de la monada      
 getLineNo :: P Int
 getLineNo = \s l -> Ok l
@@ -317,7 +313,6 @@ lexKeywordOrIdent cont tokenRaw = \_ line ->
             "mac"        -> TokenDeviceMac
             "ip"         -> TokenDeviceIP
             "subnet"     -> TokenDeviceSubnet
-            "interfaces" -> TokenDeviceInterfaces
             "packets"    -> TokenPackets
             "rules"      -> TokenRules
             "chain"      -> TokenChain
@@ -332,7 +327,6 @@ lexKeywordOrIdent cont tokenRaw = \_ line ->
             "ACCEPT"     -> TokenAccept
             "DROP"       -> TokenDrop
             "REJECT"     -> TokenReject
-            "def"        -> TokenDef
             "subnets"    -> TokenSubnets
             "devices"    -> TokenDevices
             "range"      -> TokenRange
@@ -349,7 +343,6 @@ lexKeywordOrIdent cont tokenRaw = \_ line ->
             "dstsubnet"  -> TokenDstSubnet
             "do"         -> TokenDo
             "default"    -> TokenDefault
-            "network"    -> TokenNetwork
             _            -> TokenIdent ident
     in cont token rest line
 
@@ -403,16 +396,16 @@ checkValidMAC macStr =
 -- dada una lista de strings que identifican IPs y un constructor de tipo, retornar el tipo de match correspondiente segun el constructor
 conjunctIPMatches :: [ String ] -> (IPV4.IPv4 -> Match) -> Match
 conjunctIPMatches [ipStr] construct = construct (readIP ipStr)
-conjunctIPMatches (ipStr : ipStrs) construct = AndMatch (construct (readIP ipStr)) (conjunctIPMatches ipStrs construct)
+conjunctIPMatches (ipStr : ipStrs) construct = OrMatch (construct (readIP ipStr)) (conjunctIPMatches ipStrs construct)
 
 
 conjunctIPRangeMatches :: [IPV4.IPv4Range] -> (IPV4.IPv4Range -> Match) -> Match
 conjunctIPRangeMatches [r] construct = construct r
-conjunctIPRangeMatches (r:rs) construct = AndMatch (construct r) (conjunctIPRangeMatches rs construct)
+conjunctIPRangeMatches (r:rs) construct = OrMatch (construct r) (conjunctIPRangeMatches rs construct)
 
 conjunctIfMatches :: [String] -> (T.Text -> Match) -> Match
 conjunctIfMatches [ifStr] c = c (T.pack ifStr)
-conjunctIfMatches (ifstr : ifstrs) c = AndMatch (c $ T.pack ifstr) (conjunctIfMatches ifstrs c)
+conjunctIfMatches (ifstr : ifstrs) c = OrMatch (c $ T.pack ifstr) (conjunctIfMatches ifstrs c)
 
 
 processRawDevices :: [Subnet] -> [RawDevice] -> P [Device]
@@ -423,7 +416,7 @@ resolveDevice subnets (RawDevice name mac ip subnetRef isFirewall)
     | isFirewall = do
         -- Para el firewall, obtener todas las interfaces de las subredes + eth3
         let subnetIfaces = map subnetInterface subnets
-        let allIfaces = (subnetIfaces ++ [defaultFwIf]) -- para q no aparezca repetido, meh
+        let allIfaces = (subnetIfaces ++ [defaultFwIf]) -- capaz lo saco a esto
         -- El firewall no tiene una subred específica, usar un rango /32 con su IP
         let fwRange = IPV4.range ip 32 -- ?
         returnP $ Device name mac ip fwRange allIfaces -- ?
@@ -435,8 +428,11 @@ resolveDevice subnets (RawDevice name mac ip subnetRef isFirewall)
                 if subnetRange subnet `IPV4.contains` ip
                     then returnP $ Device name mac ip (subnetRange subnet) [subnetInterface subnet]
                     else failP $ "IP " ++ show ip ++ " no está en la subred " ++ T.unpack subnetRef
-            Nothing -> failP $ "Subred no encontrada (" ++ T.unpack subnetRef ++ ")"
-
+            Nothing -> 
+                    -- el unico dispositivo cuyo identificador de
+                    if subnetRef == (T.pack "INTERNET")
+                    then failP $ "No se reconoce el dispositivo asociado al firewall o bien un dispositivo tiene 'INTERNET' como subred asignada."
+                    else failP $ "Subred no encontrada (" ++ T.unpack subnetRef ++ ")"
 
 -- Esta funcion se invoca al ocurrir un error de parseo
 happyError :: P a

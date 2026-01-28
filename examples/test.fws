@@ -22,10 +22,16 @@ devices {
 		subnet = LAN;
 	}
 
-	device pc-lab {
+	device servidor-webb {
 		mac = "AA:BB:CC:DD:EE:EE";
         ip = 200.1.1.0;
 		subnet = DMZ;
+	}
+
+    device  firewall{
+		mac = "AA:BB:CC:DD:EE:EF";
+        ip = 192.168.1.1;
+		subnet = LAN;
 	}
 
 	device firewall {
@@ -40,6 +46,7 @@ packets {
     p2 : 192.168.0.111 -> 192.168.1.10 : tcp 12121 -> 80 : from "wlan1" to "ppp0";
     p3 : 211.168.1.1 -> 8.8.8.8 : udp 22222 -> 53 : from "" to "eth1";
     p4 : 192.168.1.10 -> 192.168.0.111 : udp 56737 -> 67 : from "ppp0" to "wlan1";
+    p5 : 192.168.1.1 -> 8.8.8.8 : udp 9999 -> 53 : from "ppp0" to "";
 }
 
 rules {
@@ -49,6 +56,7 @@ rules {
         -srcsubnet 192.168.1.0/24 -do REJECT;
     }
     chain FORWARD {
+         -srcip 192.168.1.1, 192.168.1.2 -dstip 8.8.8.8, 127.0.0.1 -do ACCEPT;
         -prot tcp -dstp 80,443 -do ACCEPT;
         -prot udp -dstp 53 -do ACCEPT;
         -default DROP;
