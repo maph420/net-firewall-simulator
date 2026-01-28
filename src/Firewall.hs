@@ -15,7 +15,6 @@ import qualified Net.IPv4 as IPV4
 import qualified Data.Text as T
 import Text.Printf (printf)
 import PrettyPrinter (renderMatch)
-import Data.List (find)
 
 --------------------------
 -- Funciones auxiliares --
@@ -74,12 +73,10 @@ isExtToExtPacket p devices = isNothing (findDeviceByIP (srcip p) devices) && isN
     isNothing Nothing = True
     isNothing _ = False
 
--- Agregar la interfaz que vincula al firewall con el router por defecto
-addDefaultIf :: Device -> Device
-addDefaultIf dev =
-    if defaultFwIf `elem` interfaces dev
-    then dev
-    else dev { interfaces = (defaultFwIf : (interfaces dev)) }
+-- Buscar el dispositivo asociado al firewall
+lookForFw :: [Device] -> Maybe Device
+lookForFw [] = Nothing
+lookForFw (d:ds) = if (T.toLower (devName d)) == "firewall" then Just d else lookForFw ds
 
 -------------------------------------------------
 -- Funciones de seguridad/chequeo del firewall --
@@ -182,46 +179,29 @@ eval m pkt = eval' m
     eval' (OrMatch m1 m2) = (eval' m1) || (eval' m2)
 
 
-
-
--- Especificar que hace
-postProcess :: Info -> ErrAST Info
-postProcess info = do
-    -- Solo agregar eth3 al firewall si no esta, capaz lo saco
-    let devices = infoNetwork info
-        firewall = find (\d -> T.toLower (devName d) == "firewall") devices
-    case firewall of
-        Just fw -> do
-            let fw' = addDefaultIf fw
-            let devices' = map (\d -> if T.toLower (devName d) == "firewall" then fw' else d) devices
-            return $ info { infoNetwork = devices' }
-        Nothing -> return info  -- El validador ya debería haber detectado esto
-
 -- Crear estructura de informacion del firewall, partiendo de la estructura parseada Info
 -- Si hay alguna inconsistencia semántica de la estructura parseada, lo detectará el validador de ast
 buildConfig :: Info -> ErrAST FirewallConfig
 buildConfig info = do
     astValidation info
-
-    info' <- postProcess info
-
-    let firewallDevices = filter (\d -> T.toLower (devName d) == "firewall") 
-                           (infoNetwork info')
-
-    -- El lexer ya deberia haber constatado que existe 1 y solo 1 firewall, pero por las dudas chequeamo
-    firewall <- case firewallDevices of
-        [d] -> Right d
-        _ -> Left "Error: El validador fallo en verificar el firewall"
     
-    return FirewallConfig {
-        fwIP = ipv4Dir firewall,
-        fwRules = infoRules info',
-        fwDevices = infoNetwork info'
-    }
+    -- Obtiene una tupla con EL firewall, y el resto de dispositivos
+    -- Si paso el ast validation, sabemos que existe exactamente 1 dispositivo firewall
+    let devices = infoNetwork info
+        firewall = lookForFw devices
+    
+    case firewall of
+        Just fw -> do
+            return FirewallConfig {
+                fwIP = ipv4Dir fw,
+                fwRules = infoRules info,
+                fwDevices = devices
+            }
+        Nothing -> throwError "Error: El validador fallo en verificar el firewall"
 
---------------------------------------
--- funcion para iniciar simulacion ---
---------------------------------------
+-------------------------------------
+-- funcion para iniciar simulacion --
+-------------------------------------
 
 runFirewallSimulation :: Info -> ([(Packet, Action)], [LogEntry])
 runFirewallSimulation info = 
@@ -265,9 +245,8 @@ formatLogs logs = T.unlines $ zipWith formatEntry ([1..] :: [Int]) logs
 formatResults :: [(Packet, Action)] -> T.Text
 formatResults pas = T.pack $ concatMap formatLine pas
   where
-    formatLine (pkt, act) = printf "%-15s : \t%s\n" (show $ packid pkt) (T.unpack $ verboseAction act)
+    formatLine (pkt, act) = printf "%-15s : \t%-10s\n" (show $ packid pkt) (T.unpack $ verboseAction act)
     verboseAction :: Action -> T.Text
     verboseAction Accept = "Accepted"
     verboseAction Drop = "Dropped"
     verboseAction Reject = "Rejected"
-    

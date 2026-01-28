@@ -20,22 +20,15 @@ astValidation inf = do
                             network = infoNetwork inf
                             packets = infoPackets inf
                             subnetNames = infoSubnets inf
-                            
-
                         checkRepeatedChains rules 
                         checkSubnetRanges network 
-
                         -- unicidad de identificadores de dispositivos, paquetes, dir mac, ip
                         checkForIdentifiers network devName (\dn -> "El dispositivo de nombre '" `T.append` dn `T.append` "' aparece repetido\n")
                         checkForIdentifiers packets packid (\paid -> "El paquete de nombre '" `T.append` paid `T.append` "' aparece repetido\n")
                         checkForIdentifiers network macDir (\md -> "La direccion MAC '" `T.append` md `T.append` "' aparece repetida\n")
                         checkForIdentifiers subnetNames subnetName (\sn -> "El nombre de subnet '" `T.append` sn `T.append` "' aparece repetido\n")
-
                         checkForIPIdentif network (\ipdir -> "La direccion IPv4 '" `T.append` (IPV4.encode ipdir) `T.append` "' aparece repetida.\n")
-                         
                         checkChainRules rules  
-                        return ()
-
 
 -- Verifica si una misma chain fue declarada mas de una vez
 checkRepeatedChains :: RulesChains -> ErrAST ()
@@ -102,4 +95,3 @@ checkChainRules = mapM_ checkChainRule
         containsMatchType (MatchOutIf _) (MatchOutIf _) = True
         containsMatchType ty (AndMatch m1 m2) = containsMatchType ty m1 || containsMatchType ty m2
         containsMatchType _ _ = False
-

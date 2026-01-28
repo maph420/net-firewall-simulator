@@ -28,15 +28,10 @@ devices {
 		subnet = DMZ;
 	}
 
-    device  firewall{
-		mac = "AA:BB:CC:DD:EE:EF";
-        ip = 192.168.1.1;
-		subnet = LAN;
-	}
 
 	device firewall {
-        mac = "00:22:CA:FE:CA:FE";
-        publicip = 211.168.1.1;         
+        fwmac = "00:22:CA:FE:CA:FE";
+        fwip = 211.168.1.1;         
     }
 	
 }
@@ -66,3 +61,6 @@ rules {
         -default ACCEPT;
     }
 }
+
+
+
