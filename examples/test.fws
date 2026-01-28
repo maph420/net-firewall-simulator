@@ -1,28 +1,38 @@
 // test.fws
 
-network {
-    
-    device servidor-web {
-        mac = "AA:BB:CC:DD:EE:FF";
-        ip = 192.168.1.10;         
-        subnet = 192.168.1.0/24;   
-        interfaces = "ppp0";
-    }
-                 
-    device pc-lab {
-        mac = "00:11:CA:FE:CA:FE";
-        ip = 192.168.0.111;          
-        subnet = 192.168.0.0/24;   
-        interfaces = "wlan1";
-    }
+subnets {
+	
+	subnet LAN {
+		range = 192.168.1.0/24;
+		interface = "ppp0";	
+	}
 
-    // se debe definir de manera obligatoria, y con ip publica
-    device firewall {
+	subnet DMZ {
+		range = 200.1.0.0/16;
+		interface = "ppp1";
+	}
+
+}
+
+devices {
+
+	device servidor-web {
+		mac = "AA:BB:CC:DD:EE:FF";
+        ip = 192.168.1.10;
+		subnet = LAN;
+	}
+
+	device pc-lab {
+		mac = "AA:BB:CC:DD:EE:FF";
+        ip = 200.1.1.0;
+		subnet = DMZ;
+	}
+
+	device firewall {
         mac = "00:22:CA:FE:CA:FE";
-        ip = 211.168.1.1;         
-        subnet = 211.168.1.0/16;   
-        interfaces = "eth0", "eth3";
+        publicip = 211.168.1.1;         
     }
+	
 }
 
 packets {

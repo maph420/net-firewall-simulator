@@ -12,6 +12,7 @@ import Data.Text as T
 import Net.IPv4 as IPV4
 import qualified Data.Set as S
 
+{-
 astValidation :: Info -> ErrAST Info
 astValidation inf = do 
                         let rules = infoRules inf
@@ -31,8 +32,9 @@ astValidation inf = do
                          
                         checkChainRules rules  
                         return inf
+-}
 
-
+astValidation = undefined
 
 -- Verifica si una misma chain fue declarada mas de una vez
 checkRepeatedChains :: RulesChains -> ErrAST ()
@@ -51,10 +53,10 @@ checkSubnetRanges :: Network -> ErrAST ()
 checkSubnetRanges = mapM_ checkDevice 
     where
         checkDevice :: Device -> ErrAST ()
-        checkDevice d = if (subnet d) `IPV4.contains` (ipv4Dir d) 
+        checkDevice d = if (subnetDir d) `IPV4.contains` (ipv4Dir d) 
                             then return ()
                             else throwError $ "La ip " `T.append` (encode (ipv4Dir d)) `T.append` 
-                            " no pertenece al rango subnet: " `T.append` (encodeRange (subnet d)) `T.append` "\n"
+                            " no pertenece al rango subnet: " `T.append` (encodeRange (subnetDir d)) `T.append` "\n"
 
 -- Verifica si un identificador dado aparece repetido en la lista pasada. Se pasa el extractor de campo para saber por cual del registro se quiere chequear.
 -- Si hay repeticion, llama a una funcion que formatea el error.
@@ -124,3 +126,18 @@ checkChainRules = mapM_ checkChainRule
         containsMatchType (MatchOutIf _) (MatchOutIf _) = True
         containsMatchType ty (AndMatch m1 m2) = containsMatchType ty m1 || containsMatchType ty m2
         containsMatchType _ _ = False
+
+
+
+
+
+
+
+{-
+addFirewallInterfaces :: Device -> [Subnet] -> Device
+addFirewallInterfaces fw subnets =
+    let subnetIfaces = map subnetInterface subnets
+        allIfaces = S.toList $ S.fromList (subnetIfaces ++ [T.pack "eth3"]) -- no se puede S.add?
+    in fw { interfaces = allIfaces }
+
+-}

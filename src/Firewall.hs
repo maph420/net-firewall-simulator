@@ -15,6 +15,7 @@ import qualified Net.IPv4 as IPV4
 import qualified Data.Text as T
 import Text.Printf (printf)
 import PrettyPrinter (renderMatch)
+import Data.List (find)
 
 --------------------------
 -- Funciones auxiliares --
@@ -65,7 +66,7 @@ adjustPacketOutIf devices pkt =
 isIntraSubnetPacket :: Packet -> [Device] -> Bool
 isIntraSubnetPacket p devices =
     case (findDeviceByIP (srcip p) devices, findDeviceByIP (dstip p) devices) of
-        (Just src, Just dst) -> subnet src == subnet dst
+        (Just src, Just dst) -> subnetDir src == subnetDir dst
         _ -> False
 
 -- Verifica si el paquete se envía desde y hacia una IP remota (no pasa por firewall)
@@ -172,28 +173,28 @@ eval m pkt = eval' m
 -- Crear estructura de informacion temporal
 buildConfig :: Info -> ErrAST FirewallConfig
 buildConfig info = do
-    validatedInfo <- astValidation info
-    
-    let (firewall, updatedDevices) = processDevices (infoNetwork validatedInfo)
+    --validatedInfo <- astValidation info
+
+    info' <- postProcess info
+
+    let firewallDevices = filter (\d -> T.toLower (devName d) == "firewall") 
+                           (infoNetwork info')
 
     -- El lexer ya deberia haber constatado que existe 1 y solo 1 firewall, pero por las dudas chequeamo
-    case firewall of
-        Just fw -> return FirewallConfig {
-            fwIP = ipv4Dir fw,
-            fwRules = infoRules validatedInfo,
-            fwDevices = updatedDevices
-        }
-        Nothing -> Left "El validador fallo en verificar el firewall"
+    firewall <- case firewallDevices of
+        [d] -> Right d
+        _ -> Left "Error: El validador fallo en verificar el firewall"
+    
+    return FirewallConfig {
+        fwIP = ipv4Dir firewall,
+        fwRules = infoRules info',
+        fwDevices = infoNetwork info'
+    }
 
 -- Obtiene lo/los dispositivos asociados al firewall, en caso de encontrarlo le agrega la interfaz por defecto hacia el router
-processDevices :: [Device] -> (Maybe Device, [Device])
-processDevices devices = foldr processDevice (Nothing, []) devices
-  where
-    processDevice :: Device -> (Maybe Device, [Device]) -> (Maybe Device, [Device])
-    processDevice d (found, acc)    | T.toLower (devName d) == "firewall" = (Just $ newDvs, newDvs : acc)
-                                    | otherwise = (found, d : acc)
-        where 
-            newDvs = appendDefaultIf d
+
+
+
 
 appendDefaultIf :: Device -> Device
 appendDefaultIf dv = if defaultFwIf `elem` ifs
@@ -254,3 +255,30 @@ formatResults pas = T.pack $ concatMap formatLine pas
     verboseAction Drop = "Dropped"
     verboseAction Reject = "Rejected"
     
+
+
+----------
+-- test --
+----------
+
+-- Funciones auxiliares necesarias
+-- Buscar el nombre de la subnet y retornar el rango en caso de encontrarla
+-- esta medio feo que hago aca una busqueda muy similar al filter que hago que asigno a sub
+
+postProcess :: Info -> ErrAST Info
+postProcess info = do
+    -- Solo agregar eth3 al firewall si no esta, capaz lo saco
+    let devices = infoNetwork info
+    let firewall = find (\d -> T.toLower (devName d) == "firewall") devices
+    case firewall of
+        Just fw -> do
+            let fw' = addEth3IfMissing fw
+            let devices' = map (\d -> if T.toLower (devName d) == "firewall" then fw' else d) devices
+            return $ info { infoNetwork = devices' }
+        Nothing -> return info  -- El validador ya debería haber detectado esto
+
+addEth3IfMissing :: Device -> Device
+addEth3IfMissing dev =
+    if defaultFwIf `elem` interfaces dev
+    then dev
+    else dev { interfaces = interfaces dev ++ [defaultFwIf] }

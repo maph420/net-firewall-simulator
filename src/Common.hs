@@ -17,7 +17,9 @@ module Common
         LogEntry(..),
         defaultFwIf,
         FirewallConfig(..),
-        ParseResult(..)
+        ParseResult(..),
+        RawDevice(..),
+        Subnet(..)
     ) where
 
 import qualified Net.IPv4 as IPV4
@@ -44,7 +46,7 @@ data Device = Device {
     devName     :: T.Text,
     macDir      :: T.Text,
     ipv4Dir     :: IPV4.IPv4,
-    subnet      :: IPV4.IPv4Range, 
+    subnetDir   :: IPV4.IPv4Range,
     interfaces  :: [Interface]
 } deriving Show
 
@@ -101,11 +103,12 @@ data Rule = Rule {
 type RulesChains = [(PacketTarget, [Rule])]
 
 -- Estructura obtenida como resultado del parseo
-data Info = Info {
-    infoNetwork :: Network,
-    infoPackets :: SentPackets,
-    infoRules :: RulesChains
-} deriving (Show)
+data Info = Info
+    { infoSubnets :: [Subnet]      -- Nuevo campo
+    , infoNetwork :: Network
+    , infoPackets :: SentPackets
+    , infoRules :: RulesChains
+    } deriving (Show)
 
 -- Configuracion del firewall (informacion ya curada mediante un ast validation)
 data FirewallConfig = FirewallConfig {
@@ -127,3 +130,19 @@ data LogEntry = LogEntry {
 -- Estructura para manejar errores de validacion durante el parseo.
 data ParseResult a = Ok a | Failed String
                      deriving Show
+
+data Subnet = Subnet
+    { subnetName :: T.Text
+    , subnetRange :: IPV4.IPv4Range
+    , subnetInterface :: T.Text  -- Interfaz del firewall para esta subred
+    } deriving (Show)
+
+
+
+data RawDevice = RawDevice {
+    rawName     :: T.Text,
+    rawMac      :: T.Text,
+    rawIP       :: IPV4.IPv4,
+    rawSubnetRef :: T.Text,  -- Nombre de la subred o "INTERNET"
+    rawIsFirewall :: Bool
+} deriving (Show)
