@@ -61,10 +61,11 @@ adjustPacketOutIf devices pkt =
 
 -- Verifica si el paquete se envía desde y hacia una misma subnet (no pasa por firewall)
 isIntraSubnetPacket :: Packet -> [Device] -> Bool
-isIntraSubnetPacket p devices =
-    case (findDeviceByIP (srcip p) devices, findDeviceByIP (dstip p) devices) of
-        (Just src, Just dst) -> subnetDir src == subnetDir dst
-        _ -> False
+isIntraSubnetPacket p devices = (dstip p == IPV4.loopback) || intToInt
+    where
+    intToInt = case (findDeviceByIP (srcip p) devices, findDeviceByIP (dstip p) devices) of
+                    (Just src, Just dst) -> subnetDir src == subnetDir dst
+                    _ -> False
 
 -- Verifica si el paquete se envía desde y hacia una IP remota (no pasa por firewall)
 isExtToExtPacket :: Packet -> [Device] -> Bool

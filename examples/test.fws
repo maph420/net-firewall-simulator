@@ -53,6 +53,9 @@ packets {
     p2 : 192.168.1.10 -> 181.16.1.19 : tcp 12121 -> 80 : from "wlan1" to "ppp0";    // http request lan->dmz
     p3 : 200.1.0.0 -> 8.8.8.8 : udp 22222 -> 53 : from "" to "eth1";                // dns request firewall->internet (google)
     p4 : 181.16.1.19 -> 192.168.1.15 : udp 6800 -> 22 : from "ppp0" to "wlan1";    // ssh request DMZ->LAN
+    pext: 1.1.1.1 -> 2.2.2.2 : udp 2323 -> 53 : from "erer" to "dsfs";
+    pint: 192.168.1.10 -> 192.168.1.15 : udp 2323 -> 53 : from "erer" to "dsfs";
+    ploopback : 192.168.1.10 -> 127.0.0.1 : tcp 533 -> 54 : from "sdfsf" to "sdfdsf";
 }
 
 rules {
