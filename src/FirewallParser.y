@@ -424,11 +424,14 @@ processRawDevices subnets rawDevices = mapP (resolveDevice subnets) rawDevices
 resolveDevice :: [Subnet] -> RawDevice -> P Device
 resolveDevice subnets (RawDevice name mac ip subnetRef isFirewall)
     | isFirewall = do
-        -- obtenemos todas las interfaces de las subredes definidas, a eso le agregamos la interfaz por defecto que conecta al enrutador
-        let subnetIfaces = map subnetInterface subnets
-            fwIfaces = (defaultFwIf : subnetIfaces) 
-            fwRange = IPV4.range ip 24  -- convenimos esta subred para el firewall, pero no se usa
-        returnP $ Device name mac ip fwRange fwIfaces
+        if not (IPV4.public ip)
+            then failP $ "La IP del dispositivo asociado al firewall debe ser pública. IP provista: " ++ (T.unpack $ IPV4.encode ip)
+            else
+                -- obtenemos todas las interfaces de las subredes definidas, a eso le agregamos la interfaz por defecto que conecta al enrutador
+                do  let subnetIfaces = map subnetInterface subnets
+                        fwIfaces = (defaultFwIf : subnetIfaces) 
+                        fwRange = IPV4.range ip 24  -- convenimos esta subred para el firewall, pero no se usa
+                    returnP $ Device name mac ip fwRange fwIfaces
     | otherwise = do
         case findSubnet subnetRef subnets of
             Just subnet -> returnP $ Device name mac ip (subnetRange subnet) [subnetInterface subnet]
