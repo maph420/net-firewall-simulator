@@ -469,7 +469,7 @@ happyReduction_30 (_ `HappyStk`
         _ `HappyStk`
         happyRest)
          = HappyAbsSyn24
-                 (Rule (T.pack "") MatchAny happy_var_3 Nothing
+                 (Rule (T.pack "") MatchAny happy_var_3
         ) `HappyStk` happyRest
 
 happyReduce_31 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
@@ -501,7 +501,7 @@ happyReduction_34 ((HappyAbsSyn27  happy_var_4) `HappyStk`
         (HappyAbsSyn28  happy_var_1) `HappyStk`
         happyRest)
          = HappyAbsSyn26
-                 (Rule (T.pack "") happy_var_1 happy_var_4 Nothing
+                 (Rule (T.pack "") happy_var_1 happy_var_4
         ) `HappyStk` happyRest
 
 happyReduce_35 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
@@ -824,14 +824,14 @@ happySeq = happyDontSeq
 -- Estructuras intermedias para realizar el parseo de un dispositivo/subred
 
 data SubnetFieldsData = SubnetFieldsData
-    { subnetRan :: IPV4.IPv4Range
-    , subnetIf :: T.Text
+    { subnetRan :: IPV4.IPv4Range,
+      subnetIf :: T.Text
     }
 
 data DeviceFieldsData = DeviceFieldsData
-    { macAddr :: T.Text
-    , ipAddr :: IPV4.IPv4
-    , subnetRef :: T.Text 
+    { macAddr :: T.Text,
+      ipAddr :: IPV4.IPv4,
+      subnetRef :: T.Text 
     }
 
 -- Estructura para parsear un dispositivo, el cual tiene el identificador de subred asociado, en

@@ -96,25 +96,24 @@ data Match = MatchAny
 data Rule = Rule {
     ruleId      :: T.Text,
     ruleMatch   :: Match,
-    ruleAction  :: Action,
-    ruleLog     :: Maybe T.Text
+    ruleAction  :: Action
 } deriving (Show)
 
 type RulesChains = [(PacketTarget, [Rule])]
 
 -- Informacion acerca de la subnet (identificador, ip e interfaz)
 data Subnet = Subnet
-    { subnetName :: T.Text
-    , subnetRange :: IPV4.IPv4Range
-    , subnetInterface :: T.Text 
+    { subnetName :: T.Text,
+      subnetRange :: IPV4.IPv4Range,
+      subnetInterface :: T.Text 
     } deriving (Show)
 
 -- Estructura obtenida como resultado del parseo
 data Info = Info
-    { infoSubnets :: [Subnet]  
-    , infoNetwork :: Network
-    , infoPackets :: SentPackets
-    , infoRules :: RulesChains
+    { infoSubnets :: [Subnet],  
+      infoNetwork :: Network,
+      infoPackets :: SentPackets,
+      infoRules :: RulesChains
     } deriving (Show)
 
 -- Configuracion del firewall (informacion ya chequeada mediante ast validation)

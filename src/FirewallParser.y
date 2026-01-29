@@ -144,13 +144,13 @@ Stmts : {- empty -} { [] }
 Stmt : Rule ';' { $1 }
      | DefaultPolicy { $1 }
 
-DefaultPolicy : '-' default ACTION ';' { Rule (T.pack "") MatchAny $3 Nothing }
+DefaultPolicy : '-' default ACTION ';' { Rule (T.pack "") MatchAny $3 }
 
 CHAIN_NAME : INPUT  { Input }
            | OUTPUT { Output }
            | FORWARD { Forward }
 
-Rule : SpecList '-' do ACTION { Rule (T.pack "") $1 $4 Nothing }
+Rule : SpecList '-' do ACTION { Rule (T.pack "") $1 $4 }
 
 ACTION : ACCEPT { Accept }
        | DROP { Drop }
@@ -193,14 +193,14 @@ PortList : NUMBER { [$1] }
 -- Estructuras intermedias para realizar el parseo de un dispositivo/subred
 
 data SubnetFieldsData = SubnetFieldsData
-    { subnetRan :: IPV4.IPv4Range
-    , subnetIf :: T.Text
+    { subnetRan :: IPV4.IPv4Range,
+      subnetIf :: T.Text
     }
 
 data DeviceFieldsData = DeviceFieldsData
-    { macAddr :: T.Text
-    , ipAddr :: IPV4.IPv4
-    , subnetRef :: T.Text 
+    { macAddr :: T.Text,
+      ipAddr :: IPV4.IPv4,
+      subnetRef :: T.Text 
     }
 
 -- Estructura para parsear un dispositivo, el cual tiene el identificador de subred asociado, en

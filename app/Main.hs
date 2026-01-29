@@ -34,7 +34,7 @@ simulatorText :: String
 simulatorText = "\tSimulator"
 
 currVersionText :: String
-currVersionText = "1.0"
+currVersionText = "1.1"
 
 -- punto de entrada del programa
 main :: IO ()
