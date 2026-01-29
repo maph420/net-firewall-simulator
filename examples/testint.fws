@@ -4,22 +4,22 @@ subnets {
     
     subnet INTERNAL {
         range = 10.0.0.0/8;
-        firewall_interface = "eth0";
+        interface = "eth6";
     }
 
     subnet DMZ {
         range = 192.168.1.0/24;
-        firewall_interface = "eth1";
+        interface = "eth1";
     }
 
     subnet GUEST {
         range = 172.16.0.0/16;
-        firewall_interface = "eth2";
+        interface = "eth2";
     }
 
     subnet SERVERS {
         range = 10.10.0.0/24;
-        firewall_interface = "eth3";
+        interface = "eth4";
     }
 }
 
@@ -72,8 +72,8 @@ devices {
 
     // Firewall (dispositivo especial)
     device firewall {
-        mac = "00:FF:CA:FE:CA:FE";
-        public_ip = 203.0.113.1;
+        fwmac = "00:FF:CA:FE:CA:FE";
+        fwip = 203.0.113.1;
     }
 }
 
@@ -200,6 +200,9 @@ rules {
         // Permitir INTERNAL acceder a SERVERS (MySQL, SSH)
         -srcsubnet 10.0.0.0/8 -dstsubnet 10.10.0.0/24 -dstp 22,3306 -do ACCEPT;
         
+        // Permitir INTERNAL acceder a internet
+        -srcsubnet 10.0.0.0/8 -outif "eth3","eth2" -do ACCEPT;
+
         // Permitir GUEST navegar por Internet (solo web)
         -srcsubnet 172.16.0.0/16 -prot tcp -dstp 80,443 -outif "eth3" -do ACCEPT;
         
@@ -227,7 +230,7 @@ rules {
         -outif "eth1" -dstp 22,443 -do ACCEPT;
         
         // Bloquear tráfico a redes maliciosas conocidas
-        -dstip 10.0.0.0/8, 192.168.0.0/16, 172.16.0.0/12 -do REJECT;
+        -dstsubnet  192.168.0.0/16, 172.16.0.0/12 -do REJECT;
         
         // Permitir todo lo demás
         -default ACCEPT;
@@ -240,22 +243,22 @@ rules {
 // 1. p1a-intra-subnet: ACCEPT (intra-subnet, no pasa por firewall)
 // 2. p1b-intra-wrong-if: ACCEPT (intra-subnet) con WARNING de interfaz incorrecta
 // 3. p2a-internal-to-dmz: ACCEPT (regla FORWARD para web)
-// 4. p2b-dmz-to-internal: DROP (regla bloquea DMZ->INTERNAL)
-// 5. p2c-guest-to-servers: DROP (GUEST no puede acceder a SERVERS)
+// 4. p2b-dmz-to-internal: DROP (regla bloquea DMZ->INTERNAL) ---
+// 5. p2c-guest-to-servers: DROP (GUEST no puede acceder a SERVERS) ---
 // 6. p3a-to-firewall: ACCEPT (INPUT permite SSH desde INTERNAL)
 // 7. p3b-from-firewall: ACCEPT (OUTPUT permite DNS)
 // 8. p3c-firewall-to-dmz: ACCEPT (OUTPUT permite a DMZ)
-// 9. p4a-internal-to-internet: ACCEPT (FORWARD permite web a Internet)
+// 9. p4a-internal-to-internet: ACCEPT (FORWARD permite web a Internet) ----
 // 10. p4b-internet-to-dmz: ACCEPT (FORWARD permite web a DMZ)
 // 11. p4c-internet-to-firewall: DROP (INPUT bloquea eth3)
 // 12. p5a-tcp-web: ACCEPT (FORWARD para web)
 // 13. p5b-udp-dns: ACCEPT (FORWARD para DNS)
 // 14. p5c-tcp-custom: DROP (no hay regla para puerto 8080)
-// 15. p6a-invalid-src: ACCEPT (intra-subnet) con WARNING de IP desconocida
+// 15. p6a-invalid-src: ACCEPT (intra-subnet) con WARNING de IP desconocida ----
 // 16. p6b-invalid-dst: DROP (default) con WARNING de IP destino desconocida
-// 17. p7a-empty-ingress: ACCEPT (OUTPUT desde firewall)
+// 17. p7a-empty-ingress: ACCEPT (OUTPUT desde firewall) ----
 // 18. p7b-empty-egress: ACCEPT (INPUT al firewall desde INTERNAL)
 // 19. p7c-both-ifs: ACCEPT (FORWARD para web)
 // 20. p8a-no-match: DROP (default policy)
-// 21. p8b-explicit-match: ACCEPT (FORWARD para DNS)
+// 21. p8b-explicit-match: ACCEPT (FORWARD para DNS) ----
 // 22. p8c-internet-no-match: DROP (default policy)

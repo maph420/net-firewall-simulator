@@ -6,66 +6,86 @@ El proyecto consiste en un **DSL** cuyo objetivo es simular el comportamiento de
   
 ## Archivos del simulador
 
-Un archivo del simulador (extensión `.fws`) se divide en tres secciones. A continuación se detalla cada una de ellas junto con su sintaxis:
+Un archivo del simulador (extensión `.fws`) se divide en cuatro secciones. A continuación se detalla cada una de ellas junto con su sintaxis:
 
-### Sección network
+### Sección subnets
 
-Define los dispositivos de la red que serán protegidos por el firewall. Asi se definirían **N** dispositivos en la red, además del firewall:
+Define las subredes que conformarán la red que protegerá el firewall. Así se definen **N** subredes:
+
 ```
+subnets {
+	
+	subnet subnet-1 {
+		range = ???.???.???.???/??;
+		interface = "???";	
+	}
 
-network {
-
-device firewall {
-    mac = "???";
-    ip = ???.???.???.???;
-    subnet = ???.???.???.???/??;
-    interfaces = "???", "???", ..., "???";
-}
-
-device device-name-1 {
-mac = "???";
-ip = ???.???.???.???;
-subnet = ???.???.???.???/??;
-interfaces = "???";
-}
-
-device device-name-2 {
-    mac = "???";
-    ip = ???.???.???.???;         
-    subnet = ???.???.???.???/??;   
-    interfaces = "???";
-}
-.
-.
-.
-device device-name-N {
-    mac = "???";
-    ip = ???.???.???.???;         
-    subnet = ???.???.???.???/??;   
-    interfaces = "???";
-}
-
+    subnet subnet-2 {
+        range = ???.???.???.???/??;
+        interface = "???";
+    }
+    .
+    .
+    .
+    subnet subnet-N {
+        range = ???.???.???.???/??;
+        interface = "???";
 }
 ```
-Cada dispositivo se describe con:
+Donde ```range``` es la dirección IPv4 de la subred correspondiente e ```interface``` es el nombre de la interfaz de red que vincula a la subred con el firewall. Por ejemplo, si la subred es creada mediante un switch, la interfaz será la que una este con el firewall. Ahora bien, nos abstraemos de la existencia de este switch. 
+
+Así se vería el esquema de red una vez definida las subredes:
+
+<a>
+  <img src="https://i.postimg.cc/GhnQrpFx/REFF.jpg" alt="REFF.jpg" width="500" height="275" caption="sdfsdf">
+</a>
+
+
+### Sección devices
+
+Define los dispositivos de la red que serán protegidos por el firewall. Asi se definirían N dispositivos en la red, además del firewall:
+
+```
+devices {
+
+  device device-name-1 {
+  mac = "???";
+  ip = ???.???.???.???;
+  subnet = ???;
+  }
+  
+  device device-name-2 {
+      mac = "???";
+      ip = ???.???.???.???;     
+      subnet = ???;
+  }
+  .
+  .
+  .
+  device device-name-N {
+      mac = "???";
+      ip = ???.???.???.???;     
+      subnet = ???;
+  }
+  
+  device firewall {
+      fwmac = "???";
+      fwip = ???.???.???.???;
+  }
+
+}
+```
+Cada dispositivo definido se describe con:
 
 **``mac:``** debe ir encerrada entre `""`, se trata de una cadena de caracteres identificatoria a una dirección **MAC** válida.
 
-**``ip:``** una dirección **IPv4** válida.
+**``ip:``** una dirección **IPv4** válida, debe ser consistente con el rango de direcciones IPv4 de la subred a la cual pertenece.
 
-**``subnet:``** el rango de direcciones **IPv4** de la subred a la cual pertenece el dispositivo. Usar notación **CIDR** (más abajo hay un ejemplo). La subnet debe ser consistente con la dirección **IPv4** suministrada.
+**``subnet:``** identificador de la subred a la cual pertenece. Por ejemplo si existe una subred llamada ``LAN`` definida en la seccion de subredes, entonces este es un valor válido.
 
-**``interfaces:``** la interfaz/interfaces del dispositivo. Para especificar múltiples interfaces, proveer una lista de cadenas de caracteres (encerrar entre `""`) que identifiquen a cada una de las interfaces disponibles del dispositivo, separadas por '`,`'.
 
 > [!IMPORTANT]
-> Observar que sólo al firewall se le permite especificar más de una interfaz. Esto es porque cada interfaz tiene su propia dirección ip, pero convenimos especificar todas las interfaces del firewall, proveyendo únicamente la ip de la interfaz que lo vincula al enrutador (eth3 es asumida).
-
-> [!IMPORTANT]
-> Para que el programa funcione correctamente, se DEBE definir un dispositivo asociado al firewall, de nombre ``firewall``. Por convención, consideramos al firewall como un dispositivo más en la red.
-
-
-> [!NOTE]
-> Para asignar la subred del firewall, usamos el rango en el cual está contenida la ip publica del mismo. Por ejemplo, para un firewall cuya ip publica (para acceder a internet a traves del router) es 200.3.1.2, se podria usar un rango: 200.3.1.0/24. No afecta a los resultados de la simulacion, asi que es solo una convención.
+> Para que el programa funcione correctamente, se DEBE definir un dispositivo asociado al firewall, de nombre ``firewall``. Observar que este tiene sus propios campos ``fwmac`` y ``fwip`` análogos al resto de dispositivos. Además no requiere definir interfaces, ya que convenimos que el firewall estará usando todas las interfaces de las subredes definidas, sumado a la interfaz que lo conecta al enrutador para acceder a internet, que asumimos que es **eth3**.
 
 
 ### Sección packets
@@ -135,13 +155,13 @@ Las condiciones que se pueden imponer para cada regla son:
 
 - `-prot` `???`. Donde el protocolo puede ser: ``tcp``, ``udp``, o ``any`` (los dos anteriores).
 
-- `-srcp ??, ...` Especifica el/los puertos del nodo origen que emitió el paquete. Los valores son números naturales en el rango `[0, 65535]`.
+- `-srcp ??, ...` Especifica el/los puertos del nodo origen que emitió el paquete. Basta con que coincida con al menos un puerto para matchear. Los valores son números naturales en el rango `[0, 65535]`.
 
-- `-dstp ??, ...` Especifica el/los puertos a los cuales el emisor del paquete quiere acceder. Los valores son números naturales en el rango `[0, 65535]`.
+- `-dstp ??, ...` Especifica el/los puertos a los cuales el emisor del paquete quiere acceder. Basta con que coincida con al menos un puerto para matchear. Los valores son números naturales en el rango `[0, 65535]`.
 
-- `-inif "???", ..."` Especifica la/las interfaces por las cuales el paquete entrará al firewall. Sólo es compatible con las cadenas: `INPUT` y `FORWARD`. Los valores son cadenas de caracteres (las interfaces deben ir encerradas entre `""`).
+- `-inif "???", ..."` Especifica la/las interfaces por las cuales el paquete entrará al firewall. Basta con que coincida al menos una interfaz para matchear. Sólo es compatible con las cadenas: `INPUT` y `FORWARD`. Los valores son cadenas de caracteres (las interfaces deben ir encerradas entre `""`).
 
-- `-outif "???", ..."` Especifica la/las interfaces por las cuales el paquete sale, desde el nodo remitente. Sólo es compatible con las cadenas: `OUTPUT` y `FORWARD`. Los valores son cadenas de caracteres (las interfaces deben ir encerradas entre `""`).
+- `-outif "???", ..."` Especifica la/las interfaces por las cuales el paquete sale, desde el nodo remitente. Basta con que coincida al menos una interfaz para matchear. Sólo es compatible con las cadenas: `OUTPUT` y `FORWARD`. Los valores son cadenas de caracteres (las interfaces deben ir encerradas entre `""`).
 
 Adicionalmente, se agrega a la semántica la posibilidad de especificar una política por defecto (**default policy**). Esto es, ¿qué acción tomar si el paquete que pasa no coincide con ninguna de las reglas definidas?
 
@@ -169,43 +189,65 @@ Para aclarar todo lo antes mencionado, mostramos un ejemplo de archivo en `test.
 ```
 // test.fws
 
-network {
-    
-    device servidor-web {
-        mac = "AA:BB:CC:DD:EE:FF";
-        ip = 192.168.1.10;         
-        subnet = 192.168.1.0/24;   
-        interfaces = "ppp0";
-    }
-                 
-    device pc-lab {
-        mac = "00:11:CA:FE:CA:FE";
-        ip = 192.168.0.111;          
-        subnet = 192.168.0.0/24;   
-        interfaces = "wlan1";
+subnets {
+	
+	subnet LAN {
+		range = 192.168.1.0/24;
+		interface = "wlan1";	
+	}
+
+    subnet DMZ {
+        range = 181.16.1.16/28;
+        interface = "ppp0";
     }
 
-    // se debe definir de manera obligatoria, y con ip publica
-    device firewall {
-        mac = "00:22:CA:FE:CA:FE";
-        ip = 211.168.1.1;         
-        subnet = 211.168.1.0/16;   
-        interfaces = "eth0", "eth1";
+}
+
+devices {
+
+	device pc-A {
+		mac = "AA:BB:CC:DD:EE:FF";
+        ip = 192.168.1.10;
+		subnet = LAN;
+	}
+
+    device pc-B {
+		mac = "AA:BB:CC:DA:DA:FF";
+        ip = 192.168.1.15;
+		subnet = LAN;
+	}
+
+	device servidor-web {
+		mac = "AA:BB:CC:DD:CA:fe";
+        ip = 181.16.1.19;
+		subnet = DMZ;
+	}
+
+    device web-backup {
+		mac = "AA:BB:CC:DD:CA:EE";
+        ip = 181.16.1.20;
+		subnet = DMZ;
+	}
+
+	device firewall {
+        fwmac = "00:22:CA:FE:CA:FE";
+        fwip = 200.1.0.0;         
     }
+	
 }
 
 packets {
-    p1 : 192.168.0.111-> 211.168.1.1 : tcp 57890 -> 22: from "wlan1" to "";
-    p2 : 192.168.0.111 -> 192.168.1.10 : tcp 12121 -> 80 : from "wlan1" to "ppp0";
-    p3 : 211.168.1.1 -> 8.8.8.8 : udp 22222 -> 53 : from "" to "eth1";
-    p4 : 192.168.1.10 -> 192.168.0.111 : udp 56737 -> 67 : from "ppp0" to "wlan1";
+    p1 : 192.168.1.10 -> 200.1.0.0 : tcp 57890 -> 22: from "wlan1" to "";           // ssh request lan->firewall
+    p2 : 192.168.1.10 -> 181.16.1.19 : tcp 12121 -> 80 : from "wlan1" to "ppp0";    // http request lan->dmz
+    p3 : 200.1.0.0 -> 8.8.8.8 : udp 22222 -> 53 : from "" to "eth1";                // dns request firewall->internet (google)
+    p4 : 181.16.1.19 -> 192.168.1.15 : udp 6800 -> 22 : from "ppp0" to "wlan1";    // ssh request DMZ->LAN
 }
 
 rules {
     chain INPUT {
-        -srcip 192.168.1.1 -do ACCEPT;
+        -srcip 192.168.1.10 -do ACCEPT;
         -dstip 10.0.0.1 -dstp 80 -do DROP;
-        -srcsubnet 192.168.1.0/24 -do REJECT;
+        -srcsubnet 181.16.1.16/28 -do REJECT;
     }
     chain FORWARD {
         -prot tcp -dstp 80,443 -do ACCEPT;
@@ -213,25 +255,20 @@ rules {
         -default DROP;
     }
     chain OUTPUT {
-        -dstip 8.8.8.8 -do DROP;
+        -dstip 8.8.8.8 -do REJECT;
         -default ACCEPT;
     }
 }
 
 ```
-
 > [!TIP]
 > Lo unico que debería ser tratado como una cadena de caracteres (es decir, encerrado entre `""`) son las direcciones MAC y las interfaces de red.
 
-### Esquema de red convenido
-
-El esquema de la red, suponiendo que **N** subredes de dispositivos fueron definidas, se ve de esta manera:
+El esquema de red definido en el ejemplo se vería así:
 
 <a>
-  <img src="https://i.postimg.cc/kGJFVz2B/REFF.jpg" alt="REFF.jpg" width="500" height="275" caption="sdfsdf">
+  <img src="https://i.postimg.cc/2SwT0fBh/esquema-test2.png" alt="REFF.jpg" width="500" height="275" caption="sdfsdf">
 </a>
-
-Cabe aclarar que la interfaz **eth3** está presente de manera implícita como interfaz del firewall, aún si no es declarada en el campo ``interfaces`` de ``devices``.
 
 ## Instalación
 
@@ -255,6 +292,6 @@ Luego, para correr el programa:
 
 > stack run
 
-[^1]: Lo interesante será cuando dos nodos de subredes distintas se comuniquen. Convenimos que el firewall acepta automáticamente los paquetes de tráfico local (un firewall no simulado, directamente ni vería los paquetes porque no pasan por él)
+[^1]: Lo interesante será cuando dos nodos de subredes distintas se comuniquen. Convenimos que el firewall acepta automáticamente los paquetes de tráfico local (un firewall no simulado, directamente ni vería los paquetes porque no pasan por él) y también acepta tráfico remoto (tampoco pasa por él).
 
 [^2]: Para más información, consultar el man page de iptables (`man iptables`) o [iptables-tutorial](https://www.frozentux.net/iptables-tutorial/iptables-tutorial.html#INPUTCHAIN)
