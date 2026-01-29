@@ -205,16 +205,15 @@ happyReduction_5 (HappyAbsSyn7  happy_var_2)
 happyReduction_5 _ _  = notHappyAtAll 
 
 happyReduce_6 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
-happyReduce_6 = happyReduce 5# 3# happyReduction_6
+happyReduce_6 = happyMonadReduce 5# 3# happyReduction_6
 happyReduction_6 (_ `HappyStk`
         (HappyAbsSyn9  happy_var_4) `HappyStk`
         _ `HappyStk`
         (HappyTerminal (TokenIdent happy_var_2)) `HappyStk`
         _ `HappyStk`
-        happyRest)
-         = HappyAbsSyn8
-                 (Subnet (T.pack happy_var_2) (subnetRan happy_var_4) (subnetIf happy_var_4)
-        ) `HappyStk` happyRest
+        happyRest) tk
+         = happyThen ((( subnetCheck happy_var_2 `thenP` \validSubnet -> returnP (Subnet validSubnet (subnetRan happy_var_4) (subnetIf happy_var_4) )))
+        ) (\r -> happyReturn (HappyAbsSyn8 r))
 
 happyReduce_7 :: () => Happy_GHC_Exts.Int# -> Token -> Happy_GHC_Exts.Int# -> Happy_IntList -> HappyStk (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> P (HappyAbsSyn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
 happyReduce_7 = happyMonadReduce 8# 4# happyReduction_7
@@ -1007,6 +1006,11 @@ checkSubnetList :: [(String, Int)] -> P [IPV4.IPv4Range]
 checkSubnetList [] = returnP []
 checkSubnetList (t:ts) = readSubnet t `thenP` (\subnet -> checkSubnetList ts `thenP` (\subnets ->
                                                 returnP (subnet : subnets)))
+
+-- Verificar que ninguna subred declarada se llama "INTERNET" (es nombre reservado para la subnet del firewall, por convencion)
+subnetCheck :: String -> P T.Text
+subnetCheck "INTERNET" = failP $ "El nombre de la subred no puede ser INTERNET"
+subnetCheck str = returnP $ T.pack str
 
 -- Monadico para chequear por errores en el prefijo de red
 readSubnet :: (String, Int) -> P IPV4.IPv4Range

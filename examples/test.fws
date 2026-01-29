@@ -12,6 +12,7 @@ subnets {
         interface = "ppp0";
     }
 
+   
 }
 
 devices {
@@ -64,6 +65,7 @@ rules {
         -prot tcp -dstp 80,443 -do ACCEPT;
         -prot udp -dstp 53 -do ACCEPT;
         -default DROP;
+        
     }
     chain OUTPUT {
         -dstip 8.8.8.8 -do REJECT;

@@ -83,7 +83,7 @@ SubnetDeclList : Subnet { [$1] }
                | Subnet SubnetDeclList { $1 : $2 }
 
 Subnet : subnet IDENT '{' SubnetFields '}' 
-    { Subnet (T.pack $2) (subnetRan $4) (subnetIf $4) }
+    { % subnetCheck $2 `thenP` \validSubnet -> returnP (Subnet validSubnet (subnetRan $4) (subnetIf $4) )}
 
 SubnetFields : range '=' SubnetVal ';' interface '=' STRING ';'
     { % readSubnet $3 `thenP` \validRange ->
@@ -376,6 +376,11 @@ checkSubnetList :: [(String, Int)] -> P [IPV4.IPv4Range]
 checkSubnetList [] = returnP []
 checkSubnetList (t:ts) = readSubnet t `thenP` (\subnet -> checkSubnetList ts `thenP` (\subnets ->
                                                 returnP (subnet : subnets)))
+
+-- Verificar que ninguna subred declarada se llama "INTERNET" (es nombre reservado para la subnet del firewall, por convencion)
+subnetCheck :: String -> P T.Text
+subnetCheck "INTERNET" = failP $ "El nombre de la subred no puede ser INTERNET"
+subnetCheck str = returnP $ T.pack str
 
 -- Monadico para chequear por errores en el prefijo de red
 readSubnet :: (String, Int) -> P IPV4.IPv4Range

@@ -12,22 +12,21 @@ import Data.Text as T
 import Net.IPv4 as IPV4
 import qualified Data.Set as S
 
--- TODO: chequeo que ninguna subred se llame "INTERNET"
-
 astValidation :: Info -> ErrAST ()
 astValidation inf = do 
                         let rules = infoRules inf
                             network = infoNetwork inf
                             packets = infoPackets inf
-                            subnetNames = infoSubnets inf
+                            subnetInfo = infoSubnets inf
                         checkRepeatedChains rules 
                         checkSubnetRanges network 
                         -- unicidad de identificadores de dispositivos, paquetes, dir mac, ip
                         checkForIdentifiers network devName (\dn -> "El dispositivo de nombre '" `T.append` dn `T.append` "' aparece repetido\n")
                         checkForIdentifiers packets packid (\paid -> "El paquete de nombre '" `T.append` paid `T.append` "' aparece repetido\n")
                         checkForIdentifiers network macDir (\md -> "La direccion MAC '" `T.append` md `T.append` "' aparece repetida\n")
-                        checkForIdentifiers subnetNames subnetName (\sn -> "El nombre de subnet '" `T.append` sn `T.append` "' aparece repetido\n")
-                        checkForIPIdentif network (\ipdir -> "La direccion IPv4 '" `T.append` (IPV4.encode ipdir) `T.append` "' aparece repetida.\n")
+                        checkForIdentifiers subnetInfo subnetName (\sn -> "El nombre de subnet '" `T.append` sn `T.append` "' aparece repetido\n")
+                        checkForDups network ipv4Dir (\ipdir -> "La direccion IPv4 '" `T.append` (IPV4.encode ipdir) `T.append` "' aparece repetida.\n")
+                        checkForDups subnetInfo subnetRange (\ipran -> "El rango de direcciones IPv4 '" `T.append` (IPV4.encodeRange ipran) `T.append` "' aparece repetido.\n")
                         checkChainRules rules  
 
 -- Verifica si una misma chain fue declarada mas de una vez
@@ -42,7 +41,7 @@ checkRepeatedChains rulc = mapM_ check rulc
                                         then throwError $ "Cadena " `T.append` (T.show target) `T.append` " aparece repetida\n" 
                                         else return ()
 
--- Verifica que toda ip suministrada coincida con la subnet en donde esta definida
+-- Verifica que toda ip suministrada coincida con la subnet en donde esta definida.
 checkSubnetRanges :: Network -> ErrAST ()
 checkSubnetRanges = mapM_ checkDevice 
     where
@@ -52,28 +51,22 @@ checkSubnetRanges = mapM_ checkDevice
                             else throwError $ "La ip " `T.append` (encode (ipv4Dir d)) `T.append` 
                             " no pertenece al rango subnet: " `T.append` (encodeRange (subnetDir d)) `T.append` "\n"
 
--- Verifica si un identificador dado aparece repetido en la lista pasada. Se pasa el extractor de campo para saber por cual del registro se quiere chequear.
+-- Verifica si un elemento dado aparece repetido en la lista pasada. Se pasa el extractor de campo para saber por cual del registro se quiere chequear.
 -- Si hay repeticion, llama a una funcion que formatea el error.
-checkForIdentifiers :: [a] -> (a -> T.Text) -> (T.Text -> T.Text) -> ErrAST ()
-checkForIdentifiers xs fieldExtr formatErr = checkForIdentifiers' xs S.empty
+checkForDups :: Ord k => [a] -> (a -> k) -> (k -> Text) -> ErrAST ()
+checkForDups xs fieldExtr formatErr = checkForDups' xs S.empty
   where
-        checkForIdentifiers' [] _ = return ()
-        checkForIdentifiers' (y:ys) acc = do
-                                        let identif = T.toLower $ fieldExtr y 
+        checkForDups' [] _ = return ()
+        checkForDups' (y:ys) acc = do
+                                        let identif = fieldExtr y 
                                         if S.member identif acc
                                             then throwError $ formatErr identif
-                                            else checkForIdentifiers' ys (S.insert identif acc)
+                                            else checkForDups' ys (S.insert identif acc)
 
--- Similar a checkForIdentifiers, pero trabaja con ipv4 en vez de identificadores de texto
-checkForIPIdentif :: Network -> (IPV4.IPv4 -> T.Text) -> ErrAST ()
-checkForIPIdentif net formatErr = checkForIPIdentif' net S.empty
-    where
-        checkForIPIdentif' [] _ = return ()
-        checkForIPIdentif' (x:xs) acc = do
-                                    let currip = ipv4Dir x
-                                    if S.member currip acc
-                                        then throwError $ formatErr currip
-                                        else checkForIPIdentif' xs (S.insert currip acc)
+-- Verifica la repeticion de un identificador textual
+checkForIdentifiers :: [a] -> (a -> T.Text) -> (T.Text -> T.Text) -> ErrAST ()
+checkForIdentifiers xs fieldExtr formatErr = checkForDups xs (T.toLower . fieldExtr) formatErr
+
 
 -- Verifica que ninguna regla de la cadena INPUT tenga una restriccion '-outif', ni una OUTPUT una '-inif'
 checkChainRules :: RulesChains -> ErrAST ()
