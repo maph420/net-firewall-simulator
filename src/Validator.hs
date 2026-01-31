@@ -20,6 +20,7 @@ astValidation inf = do
                             subnetInfo = infoSubnets inf
                         checkRepeatedChains rules 
                         checkSubnetRanges network 
+                        checkNoDefaultIf subnetInfo
                         -- unicidad de identificadores de dispositivos, paquetes, dir mac, ip
                         checkForIdentifiers network devName (\dn -> "El dispositivo de nombre '" `T.append` dn `T.append` "' aparece repetido\n")
                         checkForIdentifiers packets packid (\paid -> "El paquete de nombre '" `T.append` paid `T.append` "' aparece repetido\n")
@@ -27,7 +28,16 @@ astValidation inf = do
                         checkForIdentifiers subnetInfo subnetName (\sn -> "El nombre de subnet '" `T.append` sn `T.append` "' aparece repetido\n")
                         checkForDups network ipv4Dir (\ipdir -> "La direccion IPv4 '" `T.append` (IPV4.encode ipdir) `T.append` "' aparece repetida.\n")
                         checkForDups subnetInfo subnetRange (\ipran -> "El rango de direcciones IPv4 '" `T.append` (IPV4.encodeRange ipran) `T.append` "' aparece repetido.\n")
+                        checkForDups subnetInfo subnetInterface (\snif -> "La interfaz: " `T.append` snif `T.append` " aparece repetida.")
                         checkChainRules rules  
+
+
+
+checkNoDefaultIf :: [Subnet] -> ErrAST ()
+checkNoDefaultIf [] = return ()
+checkNoDefaultIf (s:ss) = if (subnetInterface s == defaultFwIf)
+                            then throwError $ "No está permitido que una red tenga interfaz 'eth3', está reservada para la salida al exterior del firewall"
+                            else checkNoDefaultIf ss
 
 -- Verifica si una misma chain fue declarada mas de una vez
 checkRepeatedChains :: RulesChains -> ErrAST ()

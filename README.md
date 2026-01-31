@@ -14,10 +14,9 @@ Define las subredes que conformarán la red que protegerá el firewall. Así se 
 
 ```
 subnets {
-	
-	subnet subnet-1 {
-		range = ???.???.???.???/??;
-		interface = "???";	
+    subnet subnet-1 {
+	range = ???.???.???.???/??;
+	interface = "???";	
 	}
 
     subnet subnet-2 {
@@ -30,6 +29,7 @@ subnets {
     subnet subnet-N {
         range = ???.???.???.???/??;
         interface = "???";
+    }
 }
 ```
 Donde ```range``` es la dirección IPv4 de la subred correspondiente e ```interface``` es el nombre de la interfaz de red que vincula a la subred con el firewall. Por ejemplo, si la subred es creada mediante un switch, la interfaz será la que una este con el firewall. Ahora bien, nos abstraemos de la existencia de este switch. 
@@ -267,7 +267,7 @@ rules {
 El esquema de red definido en el ejemplo se vería así:
 
 <a>
-  <img src="https://i.postimg.cc/2SwT0fBh/esquema-test2.png" alt="REFF.jpg" width="500" height="275" caption="sdfsdf">
+  <img src="https://i.postimg.cc/2SwT0fBh/esquema-test2.png" alt="REFF.jpg" width="500" height="275" >
 </a>
 
 ## Instalación

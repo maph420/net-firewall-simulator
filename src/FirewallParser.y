@@ -317,7 +317,7 @@ lexString cont s = \_ line ->
 
 lexKeywordOrIdent :: (Token -> P a) -> String -> P a
 lexKeywordOrIdent cont tokenRaw = \_ line -> 
-    let (ident, rest) = span (\c -> isAlphaNum c || c == '.' || c == '-') tokenRaw
+    let (ident, rest) = span (\c -> isAlphaNum c || c == '.' || c == '-' || c == '_' ) tokenRaw
         token = case ident of
             "device"     -> TokenDevice ident
             "mac"        -> TokenDeviceMac
