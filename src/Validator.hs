@@ -31,12 +31,10 @@ astValidation inf = do
                         checkForDups subnetInfo subnetInterface (\snif -> "La interfaz: " `T.append` snif `T.append` " aparece repetida.")
                         checkChainRules rules  
 
-
-
 checkNoDefaultIf :: [Subnet] -> ErrAST ()
 checkNoDefaultIf [] = return ()
 checkNoDefaultIf (s:ss) = if (subnetInterface s == defaultFwIf)
-                            then throwError $ "No está permitido que una red tenga interfaz 'eth3', está reservada para la salida al exterior del firewall"
+                            then throwError $ "No está permitido que una subred tenga interfaz: " `T.append`  defaultFwIf `T.append` ", está reservada para la salida al exterior del firewall"
                             else checkNoDefaultIf ss
 
 -- Verifica si una misma chain fue declarada mas de una vez

@@ -305,9 +305,12 @@ lexIPOrNumber cont tokenRaw = \_ line ->
   let (tokenStr, rest) = span (\c -> isDigit c || c == '.') tokenRaw
   in if any (== '.') tokenStr
        then case IPV4.decodeString tokenStr of
-              Just _  -> cont (TokenIP tokenStr) rest line
-              Nothing -> Failed $ "[Linea " ++ show line ++ "] Direccion IPv4 inválida (" ++ tokenStr ++ ")"
+              Just ipdir    ->  if ipdir == IPV4.loopback || ipdir == IPV4.any || ipdir == IPV4.broadcast 
+                                    then Failed $ "[Linea " ++ show line ++ "] Direccion IPv4 especial detectada (" ++ tokenStr ++ ")"
+                                    else cont (TokenIP tokenStr) rest line
+              Nothing       -> Failed $ "[Linea " ++ show line ++ "] Direccion IPv4 inválida (" ++ tokenStr ++ ")"
        else cont (TokenNumber (read tokenStr)) rest line
+
 
 lexString :: (Token -> P a) -> String -> P a
 lexString cont s = \_ line -> 
@@ -364,7 +367,7 @@ mySplit :: String -> Char -> [String]
 mySplit [] _ = []
 mySplit str c = let (slice, rest) = break (== c) str in slice : (mySplit (drop 1 rest) c)
 
--- Esta funcion se llama durante el parseo. No deberia hacer falta verificar que efectivamente sea una ip (ya verifico el parser)
+-- Esta funcion se llama durante el parseo. No deberia hacer falta verificar que efectivamente sea una ip (ya verifico el lexer)
 -- pero por las dudas se deja el chequeo
 readIP :: String -> IPV4.IPv4
 readIP ipStr = case IPV4.decodeString ipStr of
