@@ -282,7 +282,13 @@ También se puede optar por instalarla manualmente mediante un script:
 
 > curl -sSL https://get.haskellstack.org/ | sh
 
-Para compilar el proyecto, basta con navegar hasta el directorio del mismo (`net-firewall-simulator`) y correr:
+Una vez instalado, navegar hasta el directorio del proyecto (`net-firewall-simulator`) y ejecutar el comando:
+
+> stack setup
+
+Que se encargará de descargar e instalar la versión correcta de GHC. Este se debería tener que ejecutar una única vez.
+
+Para compilar el proyecto, basta con y correr:
 
 > stack build
 
