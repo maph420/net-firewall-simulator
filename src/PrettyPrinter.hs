@@ -6,7 +6,7 @@ module PrettyPrinter
 where
 
 -- Implementa un Pretty printing para la estructura Match, la cual es expuesta en los logs
--- Como el resto de las estructuras no se muestran por pantalla, no se les realizó una función de pretty print.
+-- Como el resto de las estructuras no se muestran por pantalla, no se les realizo una funcion de pretty print.
 
 import  Common
 import Prettyprinter as PP

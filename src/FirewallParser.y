@@ -266,7 +266,6 @@ data Token
     | TokenFirewallInterface
     | TokenFirewallIP
     | TokenFirewallMAC
-
     deriving Show
     
 -- obtener numero de linea del estado de la monada      
@@ -385,7 +384,7 @@ subnetCheck :: String -> P T.Text
 subnetCheck "INTERNET" = failP $ "El nombre de la subred no puede ser INTERNET"
 subnetCheck str = returnP $ T.pack str
 
--- Monadico para chequear por errores en el prefijo de red
+-- Chequear por errores en el prefijo de red
 readSubnet :: (String, Int) -> P IPV4.IPv4Range
 readSubnet (ipStr, pref) = case IPV4.decodeString ipStr of
     Just ip -> do
@@ -438,7 +437,7 @@ resolveDevice subnets (RawDevice name mac ip subnetRef isFirewall)
                 -- obtenemos todas las interfaces de las subredes definidas, a eso le agregamos la interfaz por defecto que conecta al enrutador
                 do  let subnetIfaces = map subnetInterface subnets
                         fwIfaces = (defaultFwIf : subnetIfaces) 
-                        fwRange = IPV4.range ip 24  -- convenimos esta subred para el firewall, pero no se usa
+                        fwRange = IPV4.range ip 24  -- convenimos esta subred para el firewall, aunque no se use
                     returnP $ Device name mac ip fwRange fwIfaces
     | otherwise = do
         case findSubnet subnetRef subnets of

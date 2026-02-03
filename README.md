@@ -298,6 +298,10 @@ Luego, para correr el programa:
 
 > stack run
 
+**Aclaración**: Si hubiera algún inconveniente y Happy no generara el archivo Haskell del parser (``FirewallParser.hs``) se puede generar manualmente mediante:
+
+> happy src/FirewallParser.y -o src/FirewallParser.hs --ghc
+
 [^1]: Lo interesante será cuando dos nodos de subredes distintas se comuniquen. Convenimos que el firewall acepta automáticamente los paquetes de tráfico local (un firewall no simulado, directamente ni vería los paquetes porque no pasan por él) y también acepta tráfico remoto (tampoco pasa por él).
 
 [^2]: Para más información, consultar el man page de iptables (`man iptables`) o [iptables-tutorial](https://www.frozentux.net/iptables-tutorial/iptables-tutorial.html#INPUTCHAIN)
