@@ -1,50 +1,80 @@
 // test.fws
 
-network {
-    
-    device servidor-web {
-        mac = "AA:BB:CC:DD:EE:FF";
-        ip = 192.168.1.10;         
-        subnet = 192.168.1.0/24;   
-        interfaces = "ppp0";
-    }
-                 
-    device pc-lab {
-        mac = "00:11:CA:FE:CA:FE";
-        ip = 192.168.0.111;          
-        subnet = 192.168.0.0/24;   
-        interfaces = "wlan1";
-    }
+subnets {
+	
+	subnet LAN {
+		range = 192.168.1.0/24;
+		interface = "wlan1";	
+	}
 
-    // se debe definir de manera obligatoria, y con ip publica
-    device firewall {
-        mac = "00:22:CA:FE:CA:FE";
-        ip = 211.168.1.1;         
-        subnet = 211.168.1.0/16;   
-        interfaces = "eth0", "eth3";
+    subnet DMZ {
+        range = 181.16.1.16/28;
+        interface = "eth0";
     }
+    	subnet LAN_GOD {
+		range = 192.168.1.0/25;
+		interface = "wlan2";	
+	}
+
+}
+
+devices {
+
+	device pc_A {
+		mac = "AA:BB:CC:DD:EE:FF";
+        ip = 192.168.1.10;
+		subnet = LAN;
+	}
+
+    device pc-B {
+		mac = "AA:BB:CC:DA:DA:FF";
+        ip = 192.168.1.15;
+		subnet = LAN;
+	}
+
+	device servidor-web {
+		mac = "AA:BB:CC:DD:CA:fe";
+        ip = 181.16.1.19;
+		subnet = DMZ;
+	}
+
+    device web-backup {
+		mac = "AA:BB:CC:DD:CA:EE";
+        ip = 181.16.1.20;
+		subnet = DMZ;
+	}
+
+	device firewall {
+        fwmac = "00:22:CA:FE:CA:FE";
+        fwip = 200.1.0.0;         
+    }
+	
 }
 
 packets {
-    p1 : 192.168.0.111-> 211.168.1.1 : tcp 57890 -> 22: from "wlan1" to "";
-    p2 : 192.168.0.111 -> 192.168.1.10 : tcp 12121 -> 80 : from "wlan1" to "ppp0";
-    p3 : 211.168.1.1 -> 8.8.8.8 : udp 22222 -> 53 : from "" to "eth1";
-    p4 : 192.168.1.10 -> 192.168.0.111 : udp 56737 -> 67 : from "ppp0" to "wlan1";
+    p1 : 192.168.1.10 -> 200.1.0.0 : tcp 57890 -> 22: from "wlan1" to "";           // ssh request lan->firewall
+    ptest_2 : 192.168.1.10 -> 181.16.1.19 : tcp 12121 -> 80 : from "wlan1" to "ppp0";    // http request lan->dmz
+    p3 : 200.1.0.0 -> 8.8.8.8 : udp 22222 -> 53 : from "" to "eth1";                // dns request firewall->internet (google)
+    p4 : 181.16.1.19 -> 192.168.1.15 : udp 6800 -> 22 : from "ppp0" to "wlan1";    // ssh request DMZ->LAN
+    pext: 1.1.1.1 -> 2.2.2.2 : udp 2323 -> 53 : from "erer" to "wlan1";
+    pint: 192.168.1.10 -> 192.168.1.15 : udp 2323 -> 53 : from "erer" to "dsfs";
+    ploopback : 255.255.255.255 -> 127.0.0.2 : tcp 533 -> 54 : from "sdfsf" to "sdfdsf";
 }
 
 rules {
     chain INPUT {
-        -srcip 192.168.1.1 -do ACCEPT;
+        -srcip 192.168.1.10 -do ACCEPT;
         -dstip 10.0.0.1 -dstp 80 -do DROP;
-        -srcsubnet 192.168.1.0/24 -do REJECT;
+        -srcsubnet 181.16.1.16/28 -do REJECT;
     }
     chain FORWARD {
         -prot tcp -dstp 80,443 -do ACCEPT;
         -prot udp -dstp 53 -do ACCEPT;
         -default DROP;
+        
     }
     chain OUTPUT {
-        -dstip 8.8.8.8 -do DROP;
+        -dstip 8.8.8.8 -do REJECT;
         -default ACCEPT;
     }
 }

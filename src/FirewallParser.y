@@ -7,6 +7,7 @@ import qualified Net.IPv4 as IPV4
 import Data.Char (isSpace, isAlpha, isAlphaNum, isDigit, isHexDigit)
 import Data.Word (Word8)
 import Monads
+
 }
 
 %monad { P } { thenP } { returnP } 
@@ -19,7 +20,6 @@ import Monads
     mac             { TokenDeviceMac }
     ip              { TokenDeviceIP }
     subnet          { TokenDeviceSubnet }
-    interfaces      { TokenDeviceInterfaces }
     '{'             { TokenOpenBracket }
     '}'             { TokenCloseBracket }
     '='             { TokenAssign }
@@ -46,12 +46,17 @@ import Monads
     ')'             { TokenRParen }
     '-'             { TokenDash }
     '/'             { TokenSlash }
-    network         { TokenNetwork }
     srcip           { TokenSrcIP }
     dstip           { TokenDstIP }
     prot            { TokenProt }
     inif            { TokenInIf }
     outif           { TokenOutIf }
+    subnets         { TokenSubnets }
+    range           { TokenRange }
+    interface       {TokenFirewallInterface}
+    devices         { TokenDevices}
+    fwip            { TokenFirewallIP }
+    fwmac           { TokenFirewallMAC}
     srcp            { TokenSrcPort }
     dstp            { TokenDstPort }
     srcsubnet       { TokenSrcSubnet }
@@ -64,109 +69,155 @@ import Monads
 
 %%
 
-Script : Network Packets Rules { Info $1 $2 $3 }
+Script : Subnets Devices Packets Rules { 
+    % processRawDevices $1 $2 `thenP` \validDevices ->
+    returnP $ Info $1 validDevices $3 $4 
+ }
 
-Network : network '{' DeviceList '}' { $3 }
+-- producciones para subredes
 
-DeviceList : Device { [ $1] } 
-    | Device DeviceList { $1 : $2 }
+Subnets : {- empty -} { [] }
+        | subnets '{' SubnetDeclList '}' { $3 }
+
+SubnetDeclList : Subnet { [$1] }
+               | Subnet SubnetDeclList { $1 : $2 }
+
+Subnet : subnet IDENT '{' SubnetFields '}' 
+    { % subnetCheck $2 `thenP` \validSubnet -> returnP (Subnet validSubnet (subnetRan $4) (subnetIf $4) )}
+
+SubnetFields : range '=' SubnetVal ';' interface '=' STRING ';'
+    { % readSubnet $3 `thenP` \validRange ->
+      checkValidIf $7 `thenP` \validIf -> 
+      returnP (SubnetFieldsData validRange (T.pack validIf)) }
+
+SubnetVal : IP_ADDR '/' NUMBER { ($1, $3) }
+
+-- producciones para dispositivos
+
+Devices : devices '{' DeviceList '}' { $3 }
+
+DeviceList : Device { [ $1 ] } 
+           | Device DeviceList { $1 : $2 }
 
 Device : device IDENT '{' DeviceFields '}' 
-    { Device (T.pack $2) (macAddr $4) (ipAddr $4) (subnetRange $4) (ifaces $4) }
+    { RawDevice (T.pack $2) (macAddr $4) (ipAddr $4) (subnetRef $4) ($2 == "firewall") }
 
-SubnetVal : IP_ADDR '/' NUMBER { % readSubnet $1 $3 }
-          
+-- El firewall es parseado en una produccion distinta al resto de dispositivos
 
-DeviceFields : mac '=' STRING ';' ip '=' IP_ADDR ';' subnet '=' SubnetVal ';' interfaces '=' IfList ';'
-    { % checkValidMAC $3 `thenP` \validMAC -> mapP checkValidIf $15 `thenP` \validIfs -> 
-    returnP $ DeviceFieldsData
-        { macAddr = T.pack validMAC
-        , ipAddr = readIP $7
-        , subnetRange = $11
-        , ifaces = map T.pack validIfs
-        } }
+DeviceFields : mac '=' STRING ';' ip '=' IP_ADDR ';' subnet '=' IDENT ';'
+            { % checkValidMAC $3 `thenP` \validMAC -> 
+            returnP (DeviceFieldsData (T.pack validMAC) (readIP $7) (T.pack $11)) }
+            | fwmac '=' STRING ';' fwip '=' IP_ADDR ';' 
+            { % checkValidMAC $3 `thenP` \validMAC -> 
+            returnP (DeviceFieldsData (T.pack validMAC) (readIP $7) (T.pack "INTERNET")) }
 
-IfList : STRING { [$1] }
-    | STRING ',' IfList { $1 : $3 }
+-- producciones para paquetes
 
 Packets : packets '{' PacketList '}' { $3 }
 
 PacketList : Packet { [$1] }
-    | Packet PacketList { $1 : $2 }
+           | Packet PacketList { $1 : $2 }
 
 Packet : IDENT ':' IP_ADDR '->' IP_ADDR ':' Protocol NUMBER '->' NUMBER ':' from STRING to STRING ';'
-    { % checkValidPort $8 `thenP` \validSrcPort -> checkValidPort $10 `thenP` \validDstPort ->
-     checkValidIf $13 `thenP` \validInIf -> checkValidIf $15 `thenP` \validOutIf ->
-     returnP $ Packet (T.pack $1) (readIP $3) (readIP $5) validSrcPort validDstPort $7 (T.pack validInIf) (T.pack validOutIf) }
+    { % checkValidPort $8 `thenP` \validSrcPort -> 
+      checkValidPort $10 `thenP` \validDstPort ->
+      checkValidIf $13 `thenP` \validInIf -> 
+      checkValidIf $15 `thenP` \validOutIf ->
+      returnP $ Packet (T.pack $1) (readIP $3) (readIP $5) validSrcPort validDstPort $7 (T.pack validInIf) (T.pack validOutIf) }
 
 Protocol : tcp { TCP }
-    | udp { UDP }
-    | any { ANY }
+         | udp { UDP }
+         | any { ANY }
+
+-- producciones para reglas
 
 Rules : rules '{' ChainDecls '}' { $3 }
 
 ChainDecls : {- empty -} { [] }
-    | ChainBlock ChainDecls { $1 : $2 }
+           | ChainBlock ChainDecls { $1 : $2 }
 
 ChainBlock : chain CHAIN_NAME '{' Stmts '}' { ($2, $4) }
 
 Stmts : {- empty -} { [] }
-    | Stmt Stmts { $1 : $2 }
+      | Stmt Stmts { $1 : $2 }
 
 Stmt : Rule ';' { $1 }
-    | DefaultPolicy { $1 }
+     | DefaultPolicy { $1 }
 
--- El identificador de regla se agrega en el AST
-DefaultPolicy : '-' default ACTION ';' { Rule (T.pack "") MatchAny $3 Nothing }
+DefaultPolicy : '-' default ACTION ';' { Rule (T.pack "") MatchAny $3 }
 
 CHAIN_NAME : INPUT  { Input }
-    | OUTPUT { Output }
-    | FORWARD { Forward }
+           | OUTPUT { Output }
+           | FORWARD { Forward }
 
--- El identificador de regla se agrega en el AST
-Rule : SpecList '-' do ACTION { Rule (T.pack "") $1 $4 Nothing }
+Rule : SpecList '-' do ACTION { Rule (T.pack "") $1 $4 }
 
 ACTION : ACCEPT { Accept }
-    | DROP { Drop }
-    | REJECT { Reject }
-
+       | DROP { Drop }
+       | REJECT { Reject }
 
 SpecList : Spec { $1 }
-    | SpecList Spec { AndMatch $1 $2 }
+         | SpecList Spec { AndMatch $1 $2 }
 
-Spec : '-' srcip IPList { conjunctIPMatches $3 MatchSrcIP }
-    | '-' dstip IPList { conjunctIPMatches $3 MatchDstIP }
-    | '-' prot Protocol { MatchProt $3 }
-    | '-' inif IfList { % mapP checkValidIf $3 `thenP` \vIfs -> 
-                          returnP $ conjunctIfMatches vIfs MatchInIf }
-    | '-' outif IfList { % mapP checkValidIf $3 `thenP` \vIfs -> 
-                          returnP $ conjunctIfMatches vIfs MatchOutIf }
-    | '-' srcp PortSpec { MatchSrcPort $3 }
-    | '-' dstp PortSpec { MatchDstPort $3 }
-    | '-' srcsubnet SubnetList { % checkSubnetList $3 `thenP` \vranges -> returnP $ conjunctIPRangeMatches vranges MatchSrcSubnet }
-    | '-' dstsubnet SubnetList { % checkSubnetList $3 `thenP` \vranges -> returnP $ conjunctIPRangeMatches vranges MatchDstSubnet }
-    | '(' SpecList ')' { $2 }
+Spec : '-' srcip IPList             { conjunctIPMatches $3 MatchSrcIP }
+     | '-' dstip IPList             { conjunctIPMatches $3 MatchDstIP }
+     | '-' prot Protocol            { MatchProt $3 }
+     | '-' inif IfList              { % mapP checkValidIf $3 `thenP` \vIfs -> 
+                                        returnP $ conjunctIfMatches vIfs MatchInIf }
+     | '-' outif IfList             { % mapP checkValidIf $3 `thenP` \vIfs -> 
+                                        returnP $ conjunctIfMatches vIfs MatchOutIf }
+     | '-' srcp PortSpec            { MatchSrcPort $3 }
+     | '-' dstp PortSpec            { MatchDstPort $3 }
+     | '-' srcsubnet RuleSubnetList { % checkSubnetList $3 `thenP` \vranges -> 
+                                     returnP $ conjunctIPRangeMatches vranges MatchSrcSubnet }
+     | '-' dstsubnet RuleSubnetList { % checkSubnetList $3 `thenP` \vranges -> 
+                                     returnP $ conjunctIPRangeMatches vranges MatchDstSubnet }
+     | '(' SpecList ')'             { $2 }
+
+IfList : STRING { [$1] }
+       | STRING ',' IfList { $1 : $3 }
 
 IPList : IP_ADDR { [$1] }
-    | IP_ADDR ',' IPList { $1 : $3 }
+       | IP_ADDR ',' IPList { $1 : $3 }
 
-SubnetList : IP_ADDR '/' NUMBER { [($1, $3)] }
-    | IP_ADDR '/' NUMBER ',' SubnetList { ($1, $3) : $5 }
-
+RuleSubnetList : IP_ADDR '/' NUMBER { [($1, $3)] }
+               | IP_ADDR '/' NUMBER ',' RuleSubnetList { ($1, $3) : $5 }
 
 PortSpec : PortList { % mapP checkValidPort $1 `thenP` \ps -> returnP ps }
 
 PortList : NUMBER { [$1] }
-    | NUMBER ',' PortList { $1 : $3 }
+         | NUMBER ',' PortList { $1 : $3 }
 
 {
+
+-- Estructuras intermedias para realizar el parseo de un dispositivo/subred
+
+data SubnetFieldsData = SubnetFieldsData
+    { subnetRan :: IPV4.IPv4Range,
+      subnetIf :: T.Text
+    }
+
+data DeviceFieldsData = DeviceFieldsData
+    { macAddr :: T.Text,
+      ipAddr :: IPV4.IPv4,
+      subnetRef :: T.Text 
+    }
+
+-- Estructura para parsear un dispositivo, el cual tiene el identificador de subred asociado, en
+-- lugar de la direccion de la misma. Se incluye la flag "rawIsFirewall" para chequeos
+data RawDevice = RawDevice {
+    rawName     :: T.Text,
+    rawMac      :: T.Text,
+    rawIP       :: IPV4.IPv4,
+    rawSubnetRef :: T.Text,
+    rawIsFirewall :: Bool
+} deriving (Show)
 
 data Token
     = TokenDevice String
     | TokenDeviceMac 
     | TokenDeviceIP
     | TokenDeviceSubnet
-    | TokenDeviceInterfaces
     | TokenOpenBracket
     | TokenCloseBracket
     | TokenAssign
@@ -197,7 +248,7 @@ data Token
     | TokenAnd
     | TokenLParen
     | TokenRParen
-    | TokenNetwork
+    | TokenDevices
     | TokenSrcIP
     | TokenDstIP
     | TokenProt
@@ -210,16 +261,13 @@ data Token
     | TokenDo
     | TokenDefault
     | TokenEOF     
+    | TokenSubnets
+    | TokenRange
+    | TokenFirewallInterface
+    | TokenFirewallIP
+    | TokenFirewallMAC
     deriving Show
     
--- Estructura intermedia para realizar el parseo de un dispositivo
-data DeviceFieldsData = DeviceFieldsData
-    { macAddr :: T.Text
-    , ipAddr :: IPV4.IPv4
-    , subnetRange :: IPV4.IPv4Range
-    , ifaces :: [Interface]
-    }
-
 -- obtener numero de linea del estado de la monada      
 getLineNo :: P Int
 getLineNo = \s l -> Ok l
@@ -256,9 +304,12 @@ lexIPOrNumber cont tokenRaw = \_ line ->
   let (tokenStr, rest) = span (\c -> isDigit c || c == '.') tokenRaw
   in if any (== '.') tokenStr
        then case IPV4.decodeString tokenStr of
-              Just _  -> cont (TokenIP tokenStr) rest line
-              Nothing -> Failed $ "[Linea " ++ show line ++ "] Direccion IPv4 inválida (" ++ tokenStr ++ ")"
+              Just ipdir    ->  if ipdir == IPV4.loopback || ipdir == IPV4.any || ipdir == IPV4.broadcast 
+                                    then Failed $ "[Linea " ++ show line ++ "] Direccion IPv4 especial detectada (" ++ tokenStr ++ ")"
+                                    else cont (TokenIP tokenStr) rest line
+              Nothing       -> Failed $ "[Linea " ++ show line ++ "] Direccion IPv4 inválida (" ++ tokenStr ++ ")"
        else cont (TokenNumber (read tokenStr)) rest line
+
 
 lexString :: (Token -> P a) -> String -> P a
 lexString cont s = \_ line -> 
@@ -268,13 +319,14 @@ lexString cont s = \_ line ->
 
 lexKeywordOrIdent :: (Token -> P a) -> String -> P a
 lexKeywordOrIdent cont tokenRaw = \_ line -> 
-    let (ident, rest) = span (\c -> isAlphaNum c || c == '.' || c == '-') tokenRaw
+    let (ident, rest) = span (\c -> isAlphaNum c || c == '.' || c == '-' || c == '_' ) tokenRaw
         token = case ident of
             "device"     -> TokenDevice ident
             "mac"        -> TokenDeviceMac
             "ip"         -> TokenDeviceIP
+            "fwmac"      -> TokenFirewallMAC
+            "fwip"       -> TokenFirewallIP
             "subnet"     -> TokenDeviceSubnet
-            "interfaces" -> TokenDeviceInterfaces
             "packets"    -> TokenPackets
             "rules"      -> TokenRules
             "chain"      -> TokenChain
@@ -289,7 +341,12 @@ lexKeywordOrIdent cont tokenRaw = \_ line ->
             "ACCEPT"     -> TokenAccept
             "DROP"       -> TokenDrop
             "REJECT"     -> TokenReject
-            "network"    -> TokenNetwork
+            "subnets"    -> TokenSubnets
+            "devices"    -> TokenDevices
+            "range"      -> TokenRange
+            "interface"  -> TokenFirewallInterface
+            "fwip"       -> TokenFirewallIP
+            "fwmac"      -> TokenFirewallMAC
             "srcip"      -> TokenSrcIP
             "dstip"      -> TokenDstIP
             "prot"       -> TokenProt
@@ -309,7 +366,7 @@ mySplit :: String -> Char -> [String]
 mySplit [] _ = []
 mySplit str c = let (slice, rest) = break (== c) str in slice : (mySplit (drop 1 rest) c)
 
--- Esta funcion se llama durante el parseo. No deberia hacer falta verificar que efectivamente sea una ip (ya verifico el parser)
+-- Esta funcion se llama durante el parseo. No deberia hacer falta verificar que efectivamente sea una ip (ya verifico el lexer)
 -- pero por las dudas se deja el chequeo
 readIP :: String -> IPV4.IPv4
 readIP ipStr = case IPV4.decodeString ipStr of
@@ -318,11 +375,18 @@ readIP ipStr = case IPV4.decodeString ipStr of
 
 -- validar lista de subnets
 checkSubnetList :: [(String, Int)] -> P [IPV4.IPv4Range]
-checkSubnetList = mapP (\(ipStr, pref) -> readSubnet ipStr pref)  
+checkSubnetList [] = returnP []
+checkSubnetList (t:ts) = readSubnet t `thenP` (\subnet -> checkSubnetList ts `thenP` (\subnets ->
+                                                returnP (subnet : subnets)))
 
--- Monadico para chequear por errores en el prefijo de red
-readSubnet :: String -> Int -> P IPV4.IPv4Range
-readSubnet ipStr pref = case IPV4.decodeString ipStr of
+-- Verificar que ninguna subred declarada se llama "INTERNET" (es nombre reservado para la subnet del firewall, por convencion)
+subnetCheck :: String -> P T.Text
+subnetCheck "INTERNET" = failP $ "El nombre de la subred no puede ser INTERNET"
+subnetCheck str = returnP $ T.pack str
+
+-- Chequear por errores en el prefijo de red
+readSubnet :: (String, Int) -> P IPV4.IPv4Range
+readSubnet (ipStr, pref) = case IPV4.decodeString ipStr of
     Just ip -> do
                 if (pref <= 0 || pref > 32) 
                 then failP $ "Rango CIDR inválido para la subred (" ++ show pref ++ ")"
@@ -335,7 +399,7 @@ checkValidPort portnum  | (portnum < 0 || portnum > 65535) = failP $ "Numero de 
                         
 checkValidIf :: String -> P String
 checkValidIf str = if (length str) > 15 
-                    then failP $ "Nombre de interfaz de red invalido, muy largo (" ++ str ++ ")"
+                    then failP $ "Nombre muy largo para ser una interfaz de red válida (" ++ str ++ ")"
                     else returnP str
 
 checkValidMAC :: String -> P String
@@ -343,22 +407,51 @@ checkValidMAC macStr =
     let parts = mySplit macStr ':'
     in if length parts == 6 && all (\p -> (length p == 1 || length p == 2) && all isHexDigit p) parts
        then returnP macStr
-       else failP $ "Dirección MAC inválida (" ++ macStr ++ ") \nFormato esperado: ?? : ?? : ?? : ?? : ?? : ?? (donde ? es un hexadecimal)"
+       else failP $ "Dirección MAC inválida (" ++ macStr ++ ") \nFormato esperado: ?? : ?? : ?? : ?? : ?? : ?? (donde '?' es un hexadecimal)"
 
 -- como precondicion, para estas funciones las producciones de la gramatica deben garantizar que la lista de strings tenga al menos 1 elemento.
 -- dada una lista de strings que identifican IPs y un constructor de tipo, retornar el tipo de match correspondiente segun el constructor
 conjunctIPMatches :: [ String ] -> (IPV4.IPv4 -> Match) -> Match
 conjunctIPMatches [ipStr] construct = construct (readIP ipStr)
-conjunctIPMatches (ipStr : ipStrs) construct = AndMatch (construct (readIP ipStr)) (conjunctIPMatches ipStrs construct)
-
+conjunctIPMatches (ipStr : ipStrs) construct = OrMatch (construct (readIP ipStr)) (conjunctIPMatches ipStrs construct)
 
 conjunctIPRangeMatches :: [IPV4.IPv4Range] -> (IPV4.IPv4Range -> Match) -> Match
 conjunctIPRangeMatches [r] construct = construct r
-conjunctIPRangeMatches (r:rs) construct = AndMatch (construct r) (conjunctIPRangeMatches rs construct)
+conjunctIPRangeMatches (r:rs) construct = OrMatch (construct r) (conjunctIPRangeMatches rs construct)
 
 conjunctIfMatches :: [String] -> (T.Text -> Match) -> Match
 conjunctIfMatches [ifStr] c = c (T.pack ifStr)
-conjunctIfMatches (ifstr : ifstrs) c = AndMatch (c $ T.pack ifstr) (conjunctIfMatches ifstrs c)
+conjunctIfMatches (ifstr : ifstrs) c = OrMatch (c $ T.pack ifstr) (conjunctIfMatches ifstrs c)
+
+-- Dada la lista de subnets y dispositivos parseadas, unificarlas en una lista de dispositivos definitiva, donde
+-- los dispositivos tengan la direccion ip que corresponde al identificador de subred especificado, sino tirar error
+processRawDevices :: [Subnet] -> [RawDevice] -> P [Device]
+processRawDevices subnets rawDevices = mapP (resolveDevice subnets) rawDevices
+
+resolveDevice :: [Subnet] -> RawDevice -> P Device
+resolveDevice subnets (RawDevice name mac ip subnetRef isFirewall)
+    | isFirewall = do
+        if not (IPV4.public ip)
+            then failP $ "La IP del dispositivo asociado al firewall debe ser pública. IP provista: " ++ (T.unpack $ IPV4.encode ip)
+            else
+                -- obtenemos todas las interfaces de las subredes definidas, a eso le agregamos la interfaz por defecto que conecta al enrutador
+                do  let subnetIfaces = map subnetInterface subnets
+                        fwIfaces = (defaultFwIf : subnetIfaces) 
+                        fwRange = IPV4.range ip 24  -- convenimos esta subred para el firewall, aunque no se use
+                    returnP $ Device name mac ip fwRange fwIfaces
+    | otherwise = do
+        case findSubnet subnetRef subnets of
+            Just subnet -> returnP $ Device name mac ip (subnetRange subnet) [subnetInterface subnet]
+                    
+            Nothing -> 
+                    -- el unico dispositivo cuyo identificador de subred es "INTERNET" deberia ser el firewall
+                    if subnetRef == (T.pack "INTERNET")
+                    then failP $ "No se reconoce el dispositivo asociado al firewall o bien un dispositivo tiene 'INTERNET' como subred asignada (fwmac/fwip solo son usadas para el dispositivo 'firewall')"
+                    else failP $ "Subred no encontrada (" ++ T.unpack subnetRef ++ ")"
+
+findSubnet :: T.Text -> [Subnet] -> Maybe Subnet
+findSubnet _ [] = Nothing
+findSubnet name (s:ss) = if (subnetName s) == name then Just s else findSubnet name ss
 
 -- Esta funcion se invoca al ocurrir un error de parseo
 happyError :: P a

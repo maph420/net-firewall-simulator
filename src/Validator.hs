@@ -12,27 +12,30 @@ import Data.Text as T
 import Net.IPv4 as IPV4
 import qualified Data.Set as S
 
-astValidation :: Info -> ErrAST Info
+astValidation :: Info -> ErrAST ()
 astValidation inf = do 
                         let rules = infoRules inf
                             network = infoNetwork inf
                             packets = infoPackets inf
-
+                            subnetInfo = infoSubnets inf
                         checkRepeatedChains rules 
                         checkSubnetRanges network 
-                        checkFirewall network 
-
+                        checkNoDefaultIf subnetInfo
                         -- unicidad de identificadores de dispositivos, paquetes, dir mac, ip
                         checkForIdentifiers network devName (\dn -> "El dispositivo de nombre '" `T.append` dn `T.append` "' aparece repetido\n")
                         checkForIdentifiers packets packid (\paid -> "El paquete de nombre '" `T.append` paid `T.append` "' aparece repetido\n")
                         checkForIdentifiers network macDir (\md -> "La direccion MAC '" `T.append` md `T.append` "' aparece repetida\n")
-                        
-                        checkForIPIdentif network (\ipdir -> "La direccion IPv4 '" `T.append` (IPV4.encode ipdir) `T.append` "' aparece repetida.\n")
-                         
+                        checkForIdentifiers subnetInfo subnetName (\sn -> "El nombre de subnet '" `T.append` sn `T.append` "' aparece repetido\n")
+                        checkForDups network ipv4Dir (\ipdir -> "La direccion IPv4 '" `T.append` (IPV4.encode ipdir) `T.append` "' aparece repetida.\n")
+                        checkForDups subnetInfo subnetRange (\ipran -> "El rango de direcciones IPv4 '" `T.append` (IPV4.encodeRange ipran) `T.append` "' aparece repetido.\n")
+                        checkForDups subnetInfo subnetInterface (\snif -> "La interfaz: " `T.append` snif `T.append` " aparece repetida.")
                         checkChainRules rules  
-                        return inf
 
-
+checkNoDefaultIf :: [Subnet] -> ErrAST ()
+checkNoDefaultIf [] = return ()
+checkNoDefaultIf (s:ss) = if (subnetInterface s == defaultFwIf)
+                            then throwError $ "No está permitido que una subred tenga interfaz: " `T.append`  defaultFwIf `T.append` ", está reservada para la salida al exterior del firewall"
+                            else checkNoDefaultIf ss
 
 -- Verifica si una misma chain fue declarada mas de una vez
 checkRepeatedChains :: RulesChains -> ErrAST ()
@@ -46,62 +49,31 @@ checkRepeatedChains rulc = mapM_ check rulc
                                         then throwError $ "Cadena " `T.append` (T.show target) `T.append` " aparece repetida\n" 
                                         else return ()
 
--- Verifica que toda ip suministrada coincida con la subnet en donde esta definida
+-- Verifica que toda ip suministrada coincida con la subnet en donde esta definida.
 checkSubnetRanges :: Network -> ErrAST ()
 checkSubnetRanges = mapM_ checkDevice 
     where
         checkDevice :: Device -> ErrAST ()
-        checkDevice d = if (subnet d) `IPV4.contains` (ipv4Dir d) 
+        checkDevice d = if (subnetDir d) `IPV4.contains` (ipv4Dir d) 
                             then return ()
                             else throwError $ "La ip " `T.append` (encode (ipv4Dir d)) `T.append` 
-                            " no pertenece al rango subnet: " `T.append` (encodeRange (subnet d)) `T.append` "\n"
+                            " no pertenece al rango subnet: " `T.append` (encodeRange (subnetDir d)) `T.append` "\n"
 
--- Verifica si un identificador dado aparece repetido en la lista pasada. Se pasa el extractor de campo para saber por cual del registro se quiere chequear.
+-- Verifica si un elemento dado aparece repetido en la lista pasada. Se pasa el extractor de campo para saber por cual del registro se quiere chequear.
 -- Si hay repeticion, llama a una funcion que formatea el error.
-checkForIdentifiers :: [a] -> (a -> T.Text) -> (T.Text -> T.Text) -> ErrAST ()
-checkForIdentifiers xs fieldExtr formatErr = checkForIdentifiers' xs S.empty
+checkForDups :: Ord k => [a] -> (a -> k) -> (k -> Text) -> ErrAST ()
+checkForDups xs fieldExtr formatErr = checkForDups' xs S.empty
   where
-        checkForIdentifiers' [] _ = return ()
-        checkForIdentifiers' (y:ys) acc = do
-                                        let identif = T.toLower $ fieldExtr y 
+        checkForDups' [] _ = return ()
+        checkForDups' (y:ys) acc = do
+                                        let identif = fieldExtr y 
                                         if S.member identif acc
                                             then throwError $ formatErr identif
-                                            else checkForIdentifiers' ys (S.insert identif acc)
+                                            else checkForDups' ys (S.insert identif acc)
 
--- Similar a checkForIdentifiers, pero trabaja con ipv4 en vez de identificadores de texto
-checkForIPIdentif :: Network -> (IPV4.IPv4 -> T.Text) -> ErrAST ()
-checkForIPIdentif net formatErr = checkForIPIdentif' net S.empty
-    where
-        checkForIPIdentif' [] _ = return ()
-        checkForIPIdentif' (x:xs) acc = do
-                                    let currip = ipv4Dir x
-                                    if S.member currip acc
-                                        then throwError $ formatErr currip
-                                        else checkForIPIdentif' xs (S.insert currip acc)
-
--- Verifica que exista un dispositivo llamado 'firewall' y que sea ruteable a internet (para recibir paquetes del exterior)
--- adicionalmente chequea, para todo dispositivo que no sea el firewall, que tenga exactamente 1 interfaz definida. (aclarar en el readme)
-checkFirewall :: Network -> ErrAST ()
-checkFirewall [] = throwError $ "No se reconoce ningún dispostivo llamado 'firewall', abortando\n"
-checkFirewall (d:ds) = if (T.toLower $ devName d) == "firewall"
-                        then if IPV4.public (ipv4Dir d)
-                                then checkReps (interfaces d)
-                                else throwError $ "La IP del dispositivo de firewall debe ser ruteable en internet (IP pública). Ip provista: " `T.append` (IPV4.encode (ipv4Dir d))
-                        else 
-                            if (Prelude.length $ interfaces d) > 1
-                                then throwError $ "Un dispositivo que no es el firewall posee más de una interfaz. Interfaces provistas: " `T.append` (T.show (interfaces d))
-                                else checkFirewall ds
- 
--- verificar si las interfaces del dispositivo están repetidas
-checkReps :: [Interface] -> ErrAST ()
-checkReps ifs = mapM_ checkRep ifs
-            where
-                checkRep iface =    let
-                                        matches = Prelude.filter (\i -> i == iface) ifs
-                                    in
-                                        if (Prelude.length matches > 1)
-                                            then throwError $ "Interfaz " `T.append` (T.show iface) `T.append` " aparece repetida en el firewall. \n" 
-                                            else return ()
+-- Verifica la repeticion de un identificador textual
+checkForIdentifiers :: [a] -> (a -> T.Text) -> (T.Text -> T.Text) -> ErrAST ()
+checkForIdentifiers xs fieldExtr formatErr = checkForDups xs (T.toLower . fieldExtr) formatErr
 
 
 -- Verifica que ninguna regla de la cadena INPUT tenga una restriccion '-outif', ni una OUTPUT una '-inif'

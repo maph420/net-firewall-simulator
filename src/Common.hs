@@ -17,7 +17,8 @@ module Common
         LogEntry(..),
         defaultFwIf,
         FirewallConfig(..),
-        ParseResult(..)
+        ParseResult(..),
+        Subnet(..)
     ) where
 
 import qualified Net.IPv4 as IPV4
@@ -44,7 +45,7 @@ data Device = Device {
     devName     :: T.Text,
     macDir      :: T.Text,
     ipv4Dir     :: IPV4.IPv4,
-    subnet      :: IPV4.IPv4Range, 
+    subnetDir   :: IPV4.IPv4Range,
     interfaces  :: [Interface]
 } deriving Show
 
@@ -75,7 +76,7 @@ type SentPackets = [Packet]
 ------------------------------
 
 data PacketTarget = Input | Output | Forward deriving (Eq, Show, Ord)
-data Action = Accept | Drop | Reject deriving (Eq,Show)
+data Action = Accept | Drop | Reject deriving (Eq, Show)
 
 -- operador algebraico al cual deben traducirse las sentencias durante el parseo
 data Match = MatchAny 
@@ -89,25 +90,33 @@ data Match = MatchAny
     | MatchSrcPort PortList
     | MatchDstPort PortList
     | AndMatch Match Match -- encadenar todo lo que pide 1 regla con mas de 1 restriccion
+    | OrMatch Match Match -- cuando se especifican multiples puertos/ip, debe matchear cualquiera de ellos
     deriving (Show)
 
 data Rule = Rule {
     ruleId      :: T.Text,
     ruleMatch   :: Match,
-    ruleAction  :: Action,
-    ruleLog     :: Maybe T.Text
+    ruleAction  :: Action
 } deriving (Show)
 
 type RulesChains = [(PacketTarget, [Rule])]
 
--- Estructura obtenida como resultado del parseo
-data Info = Info {
-    infoNetwork :: Network,
-    infoPackets :: SentPackets,
-    infoRules :: RulesChains
-} deriving (Show)
+-- Informacion acerca de la subnet (identificador, ip e interfaz)
+data Subnet = Subnet
+    { subnetName :: T.Text,
+      subnetRange :: IPV4.IPv4Range,
+      subnetInterface :: T.Text 
+    } deriving (Show)
 
--- Configuracion del firewall (informacion ya curada mediante un ast validation)
+-- Estructura obtenida como resultado del parseo
+data Info = Info
+    { infoSubnets :: [Subnet],  
+      infoNetwork :: Network,
+      infoPackets :: SentPackets,
+      infoRules :: RulesChains
+    } deriving (Show)
+
+-- Configuracion del firewall (informacion ya chequeada mediante ast validation)
 data FirewallConfig = FirewallConfig {
     fwIP :: IPV4.IPv4,
     fwRules :: RulesChains,
